@@ -1,0 +1,8 @@
+anthropic
+fastapi
+uvicorn
+python-dotenv
+pillow
+openai
+pymupdf
+fal-client

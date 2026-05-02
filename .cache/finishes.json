@@ -1,0 +1,51 @@
+{
+  "project": "Sanctuary Quarter",
+  "finishes": {
+    "floor": {
+      "material": "Engineered timber hardwood",
+      "description": "Medium warm oak timber flooring with natural grain, matte finish, wide board planks",
+      "hex": "#C4A882"
+    },
+    "walls": {
+      "material": "Painted plasterboard",
+      "description": "Flat/low-sheen white paint throughout all rooms",
+      "hex": "#F5F5F3"
+    },
+    "ceiling": {
+      "material": "Painted plasterboard",
+      "description": "Flat white ceiling with recessed downlights and ducted AC linear vents",
+      "hex": "#FFFFFF"
+    },
+    "kitchen_cabinets": {
+      "material": "Timber veneer / laminate",
+      "description": "Light bleached ash/maple upper and lower cabinets with handleless profile, warm white-blonde tone",
+      "hex": "#E8DEC8"
+    },
+    "kitchen_benchtop": {
+      "material": "Stone \u2014 engineered quartz or marble-look",
+      "description": "White/light grey stone benchtop with subtle veining, honed matte finish, waterfall edge on island",
+      "hex": "#EDEDEB"
+    },
+    "window_frames": {
+      "material": "Aluminium",
+      "description": "Powder-coated dark charcoal/black aluminium sliding and casement window frames",
+      "hex": "#2E2E2E"
+    },
+    "door_frames": {
+      "material": "Painted timber/MDF",
+      "description": "Flush white painted internal door frames and door faces; sliding wardrobe doors in frosted glass with black aluminium frame",
+      "hex": "#F0F0EE"
+    },
+    "skirting": {
+      "material": "Painted MDF/timber",
+      "description": "Flat profile skirting boards painted white to match walls, standard height",
+      "hex": "#F5F5F3"
+    },
+    "island_panel": {
+      "material": "MDF / timber",
+      "description": "Vertical fluted/reeded panel detail on kitchen island base, painted white or off-white, matte finish",
+      "hex": "#EDECEA"
+    }
+  },
+  "confidence_notes": "High confidence on floor (consistent warm oak visible across renders 4, 5, 6, 7, 8), walls (consistent flat white throughout), ceiling (white with recessed lighting and ducted AC), window frames (dark charcoal aluminium clearly visible renders 5, 7, 8), and fluted island panel (visible renders 1 and 4). Kitchen cabinet tone estimated from render 1 \u2014 light bleached timber veneer. Benchtop estimated as engineered white/light grey stone from renders 1 and 4. Bathroom (render 9) uses grey terrazzo/ceppo-style large format tiles floor-to-ceiling with matte black fixtures \u2014 not included as a separate finish category but noted. Skirting and door frames assumed white to match walls as is standard; no strong contrasting colour observed."
+}

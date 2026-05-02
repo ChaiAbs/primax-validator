@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PRiMAX 3D Generator</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="header-title">
+        <span class="brand">PRiMAX</span>
+        <span class="pipe">|</span>
+        <span class="subtitle">Spec Extraction · 3D Generation</span>
+      </div>
+      <div class="project-tag">Sanctuary Quarter · Apartment 1.01</div>
+    </div>
+  </header>
+
+  <main>
+    <div class="left-panel">
+      <section class="section">
+        <h2 class="section-title">Project Renders <span class="label-sub">(ground truth)</span></h2>
+        <div id="renders-grid" class="renders-grid"></div>
+      </section>
+
+      <section id="section-result" class="section hidden">
+        <h2 class="section-title">
+          AI Generated Render <span class="label-sub">(NanoBanana · image-to-image)</span>
+        </h2>
+        <div class="image-frame">
+          <img id="result-img" src="" alt="Generated render" />
+        </div>
+      </section>
+    </div>
+
+    <div class="right-panel">
+      <div class="action-bar">
+        <button id="btn-render" onclick="handleRender()">Generate 3D Render</button>
+      </div>
+
+      <div id="status-msg" class="status-msg"></div>
+
+      <div id="spec-preview" class="spec-preview hidden">
+        <div class="spec-tabs">
+          <button class="spec-tab active" onclick="switchSpec('geometry')">Geometry</button>
+          <button class="spec-tab" onclick="switchSpec('finishes')">Finishes</button>
+          <button class="spec-tab" onclick="switchSpec('brand')">Brand</button>
+        </div>
+        <pre id="spec-geometry" class="spec-content"></pre>
+        <pre id="spec-finishes" class="spec-content hidden"></pre>
+        <pre id="spec-brand"    class="spec-content hidden"></pre>
+      </div>
+    </div>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+{
+  "project": "Ascent, Tallawong Road, Rouse Hill",
+  "brand_identity": {
+    "primary_colours": [
+      {
+        "name": "Deep Plum",
+        "hex": "#410e2b",
+        "usage": "Primary brand colour, logo, headings, dominant UI elements"
+      },
+      {
+        "name": "Soft Lavender",
+        "hex": "#ad95b7",
+        "usage": "Secondary accent, backgrounds, supporting graphic elements"
+      },
+      {
+        "name": "Pale Lilac",
+        "hex": "#e4d4ee",
+        "usage": "Tertiary accent, light backgrounds, soft overlay tones"
+      },
+      {
+        "name": "Warm Cream",
+        "hex": "#f0ece0",
+        "usage": "Background, negative space, clean neutral base"
+      }
+    ],
+    "typography": {
+      "heading": "Crista",
+      "subheading": "Liberation Sans (Bold/Caps)",
+      "body": "Liberation Sans"
+    },
+    "tone_of_voice": "Refined, aspirational and calm \u2014 intelligent design language that evokes space, light and natural connection without being overtly luxurious or aggressive",
+    "positioning": "A thoughtfully designed residential apartment community offering sunlit, nature-connected living in Rouse Hill, positioned as a sanctuary balancing modern design with a leafy natural setting"
+  },
+  "presentation_style": {
+    "mood": "Warm, sun-drenched and tranquil \u2014 interiors feel open, airy and naturally lit with a soft organic elegance",
+    "lighting": "Natural daylight driven \u2014 large windows, sliding glass doors and glass balconies as primary light sources; soft warm ambient fill; no harsh artificial lighting",
+    "accent_colours": [
+      {
+        "hex": "#410e2b",
+        "where": "Soft furnishing accents, cushions, artwork, feature objects within styled rooms"
+      },
+      {
+        "hex": "#ad95b7",
+        "where": "Subtle textile layering, floral arrangements, decorative accessories"
+      },
+      {
+        "hex": "#e4d4ee",
+        "where": "Sheer curtains, light upholstery, background wall tones"
+      },
+      {
+        "hex": "#f0ece0",
+        "where": "Primary wall finishes, benchtops, base furniture tones"
+      }
+    ],
+    "staging_approach": "Tastefully appointed with restrained styling \u2014 oversized windows and glass doors kept unobstructed to maximise light and outlook; greenery and leafy views used as active compositional elements; furnishings are elegant but not overwrought, emphasising space and ease of living",
+    "key_descriptors": [
+      "sun-soaked",
+      "spacious",
+      "light-filled",
+      "leafy outlook",
+      "glass-embraced",
+      "natural light",
+      "tastefully appointed",
+      "intelligent design",
+      "sanctuary",
+      "natural setting"
+    ]
+  },
+  "design_principles": [
+    "Maximise perceived space through intelligent layout and large glazed openings",
+    "Prioritise natural light as the primary design and staging asset",
+    "Allow the surrounding leafy environment to be visible and celebrated from every vantage point",
+    "Maintain a restrained, curated aesthetic \u2014 quality over quantity in furnishing and decoration",
+    "Use the plum and lavender palette sparingly as accent layers to avoid visual heaviness",
+    "Reinforce a sense of calm sanctuary appropriate for families and lifestyle-focused buyers",
+    "Typography and graphic language should remain clean, spaced and confident \u2014 never cluttered"
+  ]
+}

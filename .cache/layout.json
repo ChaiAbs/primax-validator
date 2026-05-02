@@ -1,0 +1,64 @@
+{
+  "rooms": [
+    {
+      "name": "Dining",
+      "x_m": 0,
+      "y_m": 8.5
+    },
+    {
+      "name": "Living",
+      "x_m": 3.8,
+      "y_m": 8.2
+    },
+    {
+      "name": "Terrace1",
+      "x_m": 7.6,
+      "y_m": 9.4
+    },
+    {
+      "name": "Kitchen",
+      "x_m": 0,
+      "y_m": 5.8
+    },
+    {
+      "name": "Bath",
+      "x_m": 0,
+      "y_m": 4.3
+    },
+    {
+      "name": "Store",
+      "x_m": 0,
+      "y_m": 3.55
+    },
+    {
+      "name": "Bed01",
+      "x_m": 3.8,
+      "y_m": 5.2
+    },
+    {
+      "name": "Bed02",
+      "x_m": 3.8,
+      "y_m": 2.2
+    },
+    {
+      "name": "Terrace2",
+      "x_m": 7.6,
+      "y_m": 4.9
+    },
+    {
+      "name": "Bed03",
+      "x_m": 7.6,
+      "y_m": 1.8
+    },
+    {
+      "name": "Ensuite",
+      "x_m": 3.8,
+      "y_m": 0.75
+    },
+    {
+      "name": "Laundry",
+      "x_m": 1.5,
+      "y_m": 0.75
+    }
+  ]
+}
