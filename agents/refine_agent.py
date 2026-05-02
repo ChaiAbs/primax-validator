@@ -7,6 +7,8 @@ import urllib.request
 from pathlib import Path
 
 import anthropic
+import numpy as np
+from PIL import Image, ImageFilter, ImageEnhance
 
 from config import MODEL_FAST, CACHE_DIR, RENDERS_OUTPUT_DIR
 
@@ -187,6 +189,41 @@ def render_from_floor_plan(geometry_spec: dict, finishes_spec: dict, brand_spec:
 
     out_path = RENDERS_OUTPUT_DIR / "nb_render.png"
     out_path.write_bytes(img_bytes)
-    print(f"  Saved to {out_path}", flush=True)
+    print(f"  Saved raw render to {out_path}", flush=True)
 
-    return base64.b64encode(img_bytes).decode("utf-8")
+    print("  Applying depth cues...", flush=True)
+    enhanced = _apply_depth_cues(out_path)
+    enhanced_path = RENDERS_OUTPUT_DIR / "nb_render_enhanced.png"
+    enhanced.save(enhanced_path)
+    print(f"  Saved enhanced render to {enhanced_path}", flush=True)
+
+    buf = base64.b64encode(enhanced_path.read_bytes()).decode("utf-8")
+    return buf
+
+
+def _apply_depth_cues(img_path: Path) -> Image.Image:
+    """
+    Post-process a flat NanoBanana render with two cheap depth cues:
+    1. Directional gradient  — lighter top-right, darker bottom-left (aerial light)
+    2. Ambient occlusion     — darken pixels near wall edges to simulate corners
+    """
+    img = Image.open(img_path).convert("RGB")
+    arr = np.array(img, dtype=np.float32)
+    h, w = arr.shape[:2]
+
+    # Directional gradient (light from top-right)
+    xs = np.linspace(0, 1, w)
+    ys = np.linspace(0, 1, h)
+    xg, yg = np.meshgrid(xs, ys)
+    gradient = 1.0 - 0.15 * (yg * 0.6 + (1 - xg) * 0.4)
+    arr = arr * gradient[:, :, np.newaxis]
+
+    # Ambient occlusion: darken near dark wall edges
+    gray = np.mean(arr, axis=2)
+    wall_mask = Image.fromarray((gray < 80).astype(np.uint8) * 255)
+    ao = np.array(wall_mask.filter(ImageFilter.GaussianBlur(radius=8)), dtype=np.float32) / 255.0
+    arr = arr * (1.0 - 0.20 * ao)[:, :, np.newaxis]
+
+    result = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8))
+    result = ImageEnhance.Contrast(result).enhance(1.10)
+    return result
