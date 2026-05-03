@@ -42,13 +42,14 @@ def _upload_imgbb(path) -> str:
     return result["data"]["url"]
 
 
-def _nb_post(payload: dict) -> dict:
+def _nb_post(payload: dict, endpoint: str = "generate") -> dict:
     api_key = os.environ.get("NANOBANANA_API_KEY", "")
     if not api_key:
         raise RuntimeError("NANOBANANA_API_KEY not set")
+    url     = f"https://api.nanobananaapi.ai/api/v1/nanobanana/{endpoint}"
     headers = {**_NB_HEADERS, "Authorization": f"Bearer {api_key}"}
     body    = json.dumps(payload).encode("utf-8")
-    req     = urllib.request.Request(NB_GENERATE, data=body, headers=headers, method="POST")
+    req     = urllib.request.Request(url, data=body, headers=headers, method="POST")
     with urllib.request.urlopen(req, timeout=30) as resp:
         return json.loads(resp.read())
 
@@ -94,46 +95,37 @@ def _download_image(url: str) -> bytes:
 
 
 def build_render_prompt(geometry_spec: dict, finishes_spec: dict, brand_spec: dict) -> str:
-    client = anthropic.Anthropic()
     fin  = finishes_spec.get("finishes", finishes_spec)
     pres = brand_spec.get("presentation_style", {})
 
     rooms = geometry_spec.get("rooms", [])
     room_list = ", ".join(
-        f"{r['name']} {r['width_m']}×{r['depth_m']}m"
+        f"{r['name']} {r['width_m']}x{r['depth_m']}m"
         for r in rooms
     )
 
-    accent_colours = ", ".join(
-        f"{c['hex']} ({c.get('where', '')})"
-        for c in pres.get("accent_colours", [])
-    )
     primary_colours = ", ".join(
         f"{c['name']} {c['hex']}"
         for c in brand_spec.get("brand_identity", {}).get("primary_colours", [])
     )
 
-    response = client.messages.create(
-        model=MODEL_FAST,
-        max_tokens=500,
-        messages=[{"role": "user", "content": f"""Write an image-to-image prompt (max 130 words) for NanoBanana. One reference image is provided:
-  Image 1 = 2D floor plan — room layout is FIXED, do not alter room positions or sizes.
+    floor_desc   = fin.get("floor",            {}).get("description", "timber flooring")
+    wall_desc    = fin.get("walls",            {}).get("description", "white walls")
+    kitchen_desc = fin.get("kitchen_cabinets", {}).get("description", "timber cabinetry")
+    window_desc  = fin.get("window_frames",    {}).get("description", "aluminium frames")
+    mood         = pres.get("mood", "")
 
-The prompt must instruct:
-
-1. LAYOUT: Strictly follow the floor plan. Rooms: {room_list}. Preserve all room boundaries exactly.
-
-2. VIEW: Convert to a 3D isometric dollhouse view — 45-degree angled top-down perspective, visible wall height, depth and shadows.
-
-3. FINISHES: {fin.get("floor", {}).get("description", "")}. {fin.get("walls", {}).get("description", "")}. {fin.get("kitchen_cabinets", {}).get("description", "")}. {fin.get("window_frames", {}).get("description", "")}.
-
-4. BRAND COLOURS: Apply brand palette — {primary_colours}. Accent colours: {accent_colours}. Mood: {pres.get("mood", "")}. Lighting: {pres.get("lighting", "")}.
-
-End with: "photorealistic architectural dollhouse visualization, 4K"
-
-Return ONLY the prompt."""}],
+    return (
+        f"STRICT RULES — DO NOT VIOLATE: "
+        f"(1) Do NOT add any new rooms, walls, partitions, or structural elements that are not in the reference image. "
+        f"(2) Do NOT remove or resize any existing room. "
+        f"(3) Do NOT change the viewing angle — keep the exact overhead top-down perspective. "
+        f"The reference image contains exactly these rooms — no more, no less: {room_list}. "
+        f"ONLY these three things may change: furniture placed inside rooms, material finishes applied to surfaces, brand colours applied to soft furnishings. "
+        f"Apply finishes: {floor_desc} — but terraces and outdoor areas must use light stone or porcelain tile, NOT timber. {wall_desc}. {kitchen_desc}. {window_desc}. "
+        f"Brand colours: {primary_colours}. Mood: {mood}. "
+        f"Photorealistic top-down floor plan visualization, 4K."
     )
-    return response.content[0].text.strip()
 
 
 def render_from_floor_plan(geometry_spec: dict, finishes_spec: dict, brand_spec: dict) -> str:
@@ -157,13 +149,14 @@ def render_from_floor_plan(geometry_spec: dict, finishes_spec: dict, brand_spec:
 
     image_urls = [floor_plan_url]
 
-    print("  Submitting to NanoBanana...", flush=True)
+    print("  Submitting to NanoBanana (generate-2)...", flush=True)
     response = _nb_post({
-        "prompt":    prompt,
-        "type":      "IMAGETOIAMGE",
-        "numImages": 1,
-        "imageUrls": image_urls,
-    })
+        "prompt":      prompt,
+        "imageUrls":   image_urls,
+        "aspectRatio": "auto",
+        "resolution":  "2K",
+        "outputFormat": "jpg",
+    }, endpoint="generate-2")
     print(f"  NanoBanana response: {response}", flush=True)
 
     if response.get("code") != 200:
@@ -193,12 +186,13 @@ def render_from_floor_plan(geometry_spec: dict, finishes_spec: dict, brand_spec:
 
     print("  Applying depth cues...", flush=True)
     enhanced = _apply_depth_cues(out_path)
+
     enhanced_path = RENDERS_OUTPUT_DIR / "nb_render_enhanced.png"
     enhanced.save(enhanced_path)
     print(f"  Saved enhanced render to {enhanced_path}", flush=True)
 
     buf = base64.b64encode(enhanced_path.read_bytes()).decode("utf-8")
-    return buf
+    return buf, img_url
 
 
 def _apply_depth_cues(img_path: Path) -> Image.Image:

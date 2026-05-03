@@ -3,58 +3,116 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PRiMAX 3D Generator</title>
+  <title>PRiMAX · Visualiser</title>
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
+  <!-- Header -->
   <header>
     <div class="header-inner">
-      <div class="header-title">
-        <span class="brand">PRiMAX</span>
-        <span class="pipe">|</span>
-        <span class="subtitle">Spec Extraction · 3D Generation</span>
+      <div class="header-left">
+        <div class="header-brand">
+          <span class="brand">PR<span class="brand-i">i</span>MAX</span>
+          <span class="pipe">|</span>
+          <span class="subtitle">Apartment Visualiser</span>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-primary hidden" id="btn-generate" onclick="handleGenerate()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="5 3 19 12 5 21 5 3"/>
+            </svg>
+            Generate
+          </button>
+          <span class="upload-status" id="upload-status"></span>
+        </div>
       </div>
-      <div class="project-tag">Sanctuary Quarter · Apartment 1.01</div>
+      <div class="project-tag" id="project-tag">No project loaded</div>
     </div>
   </header>
 
-  <main>
-    <div class="left-panel">
-      <section class="section">
-        <h2 class="section-title">Project Renders <span class="label-sub">(ground truth)</span></h2>
-        <div id="renders-grid" class="renders-grid"></div>
+  <!-- Progress log -->
+  <div class="progress-bar hidden" id="progress-bar">
+    <div class="progress-log" id="progress-log"></div>
+  </div>
+
+  <!-- Welcome screen -->
+  <div id="welcome-screen" class="welcome-screen">
+    <div class="welcome-inner">
+      <p class="welcome-eyebrow">PRiMAX · Apartment Visualiser</p>
+      <h1 class="welcome-title">Turn your floor plan<br/>into a 3D model</h1>
+      <p class="welcome-sub">Upload a zip containing your 2D plan, renders, and brand guide to get started.</p>
+      <label class="btn btn-primary welcome-btn" for="zip-input-welcome">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        Attach Files
+      </label>
+      <input type="file" id="zip-input-welcome" accept=".zip" style="display:none" onchange="handleUpload(this)" />
+    </div>
+  </div>
+
+  <!-- Main workspace (hidden until upload) -->
+  <main id="workspace" class="hidden">
+
+    <!-- Left column: plan + renders + brand -->
+    <div class="left-col">
+
+      <section class="panel">
+        <h2 class="panel-title">2D Render <span class="label-sub">NanoBanana</span></h2>
+        <div class="image-frame plan-frame">
+          <img id="plan-img" src="" alt="Floor plan" />
+        </div>
       </section>
 
-      <section id="section-result" class="section hidden">
-        <h2 class="section-title">
-          AI Generated Render <span class="label-sub">(NanoBanana · image-to-image)</span>
-        </h2>
-        <div class="image-frame">
-          <img id="result-img" src="" alt="Generated render" />
+      <section class="panel">
+        <h2 class="panel-title">Renders</h2>
+        <div class="renders-grid" id="renders-grid"></div>
+      </section>
+
+      <section class="panel" id="brand-section">
+        <h2 class="panel-title">Brand</h2>
+        <div class="brand-card" id="brand-card">
+          <p class="brand-loading">Extracting brand...</p>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Right column: 3D viewer -->
+    <div class="right-col">
+      <section class="panel" style="height:100%">
+        <h2 class="panel-title">3D Model <span class="label-sub">Hunyuan · GLB</span></h2>
+
+        <!-- Pre-generate: plain text, no box -->
+        <div id="glb-idle" class="glb-idle">
+          Hit Generate to see 3D model
+        </div>
+
+        <!-- Loading state: full card with progress -->
+        <div id="glb-loading" class="viewer-frame hidden">
+          <canvas id="glb-canvas" class="hidden"></canvas>
+          <div class="glb-loading">
+            <div class="glb-loading-pct" id="glb-pct">0%</div>
+            <div class="glb-loading-bar"><div class="glb-loading-fill" id="glb-fill"></div></div>
+            <div class="glb-loading-label" id="glb-stage">Starting pipeline</div>
+          </div>
+          <div class="viewer-hint hidden" id="viewer-hint">Drag to rotate · Scroll to zoom · Right-drag to pan</div>
         </div>
       </section>
     </div>
 
-    <div class="right-panel">
-      <div class="action-bar">
-        <button id="btn-render" onclick="handleRender()">Generate 3D Render</button>
-      </div>
-
-      <div id="status-msg" class="status-msg"></div>
-
-      <div id="spec-preview" class="spec-preview hidden">
-        <div class="spec-tabs">
-          <button class="spec-tab active" onclick="switchSpec('geometry')">Geometry</button>
-          <button class="spec-tab" onclick="switchSpec('finishes')">Finishes</button>
-          <button class="spec-tab" onclick="switchSpec('brand')">Brand</button>
-        </div>
-        <pre id="spec-geometry" class="spec-content"></pre>
-        <pre id="spec-finishes" class="spec-content hidden"></pre>
-        <pre id="spec-brand"    class="spec-content hidden"></pre>
-      </div>
-    </div>
   </main>
 
-  <script src="/static/app.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="/static/app.js"></script>
 </body>
 </html>

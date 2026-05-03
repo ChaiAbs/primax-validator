@@ -151,14 +151,23 @@ def build_scene(use_cache: bool = True) -> dict:
 
 
 def run_render() -> dict:
-    """Extract specs (cached) then render floor plan via NanoBanana image-to-image."""
+    """Extract specs (cached), render via NanoBanana, then convert to 3D GLB via Hunyuan."""
     from agents.refine_agent import render_from_floor_plan
+    from agents.hunyuan_agent import generate_3d
+
     geometry_spec, finishes_spec, brand_spec = extract_specs()
+
     print("Sending floor plan to NanoBanana...", flush=True)
     t0 = time.time()
-    result_b64 = render_from_floor_plan(geometry_spec, finishes_spec, brand_spec)
+    result_b64, nb_image_url = render_from_floor_plan(geometry_spec, finishes_spec, brand_spec)
     print(f"  NanoBanana done in {time.time() - t0:.1f}s", flush=True)
+
+    glb_path = RENDERS_OUTPUT_DIR / "model.glb"
+    generate_3d(nb_image_url, glb_path)
+    print(f"  3D model saved: {glb_path}", flush=True)
+
     return {
-        "image": f"data:image/png;base64,{result_b64}",
-        "specs": {"geometry": geometry_spec, "finishes": finishes_spec, "brand": brand_spec},
+        "image":     f"data:image/png;base64,{result_b64}",
+        "glb_path":  str(glb_path),
+        "specs":     {"geometry": geometry_spec, "finishes": finishes_spec, "brand": brand_spec},
     }
