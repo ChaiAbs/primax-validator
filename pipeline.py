@@ -150,24 +150,52 @@ def build_scene(use_cache: bool = True) -> dict:
     }
 
 
-def run_render() -> dict:
-    """Extract specs (cached), render via NanoBanana, then convert to 3D GLB via Hunyuan."""
+def run_render(max_attempts: int = 3) -> dict:
+    """
+    Extract specs (cached), run NanoBanana up to max_attempts times,
+    validate each with Claude Vision, pick the best, then convert to 3D GLB via Hunyuan.
+    """
     from agents.refine_agent import render_from_floor_plan
     from agents.hunyuan_agent import generate_3d
+    from agents.validator_agent import score_renders
 
     geometry_spec, finishes_spec, brand_spec = extract_specs()
 
-    print("Sending floor plan to NanoBanana...", flush=True)
-    t0 = time.time()
-    result_b64, nb_image_url = render_from_floor_plan(geometry_spec, finishes_spec, brand_spec)
-    print(f"  NanoBanana done in {time.time() - t0:.1f}s", flush=True)
+    client = anthropic.Anthropic()
+    candidates = []  # list of (path, img_url, b64)
+
+    for attempt in range(1, max_attempts + 1):
+        print(f"NanoBanana attempt {attempt}/{max_attempts}...", flush=True)
+        t0 = time.time()
+        result_b64, nb_image_url = render_from_floor_plan(geometry_spec, finishes_spec, brand_spec)
+        print(f"  Attempt {attempt} done in {time.time() - t0:.1f}s", flush=True)
+
+        # Save candidate render
+        candidate_path = RENDERS_OUTPUT_DIR / f"nb_candidate_{attempt}.png"
+        import base64 as _b64
+        candidate_path.write_bytes(_b64.b64decode(result_b64))
+        candidates.append((candidate_path, nb_image_url, result_b64))
+
+    # Validate and pick best
+    print(f"Validating {len(candidates)} candidates...", flush=True)
+    paths = [c[0] for c in candidates]
+    result = score_renders(client, paths, geometry_spec)
+    print(f"  Scores: {result}", flush=True)
+
+    best_idx = result["best"] - 1  # convert to 0-indexed
+    best_path, best_url, best_b64 = candidates[best_idx]
+    print(f"  Best candidate: run {best_idx + 1} (score {result['scores'][best_idx]['total']})", flush=True)
+
+    # Copy best to canonical output path
+    import shutil
+    shutil.copy(best_path, RENDERS_OUTPUT_DIR / "nb_render_enhanced.png")
 
     glb_path = RENDERS_OUTPUT_DIR / "model.glb"
-    generate_3d(nb_image_url, glb_path)
+    generate_3d(best_url, glb_path)
     print(f"  3D model saved: {glb_path}", flush=True)
 
     return {
-        "image":     f"data:image/png;base64,{result_b64}",
+        "image":     f"data:image/png;base64,{best_b64}",
         "glb_path":  str(glb_path),
         "specs":     {"geometry": geometry_spec, "finishes": finishes_spec, "brand": brand_spec},
     }

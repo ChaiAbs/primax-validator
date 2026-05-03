@@ -284,3 +284,15 @@ main {
 }
 
 .hidden { display: none !important; }
+
+.swap-hint {
+  font-size: 10px;
+  font-weight: 400;
+  color: rgba(241,240,238,0.25);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-left: 8px;
+}
+
+.plan-frame { cursor: pointer; }
+.plan-frame:hover { border-color: rgba(241,240,238,0.2); }

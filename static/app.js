@@ -165,6 +165,33 @@ async function handleUploadFile(file) {
 
 window.handleUpload = e => handleUploadFile(e.files[0]);
 
+// ── Panel swap ────────────────────────────────────────────────────────────────
+let _swapped = false;
+window.swapPanels = function() {
+  const leftCol  = document.querySelector('.left-col');
+  const rightCol = document.querySelector('.right-col');
+  const panel2d  = document.getElementById('panel-2d');
+  const panel3d  = document.getElementById('panel-3d');
+
+  if (!_swapped) {
+    // Move 2D into right col (top), 3D into left col (top)
+    rightCol.prepend(panel2d);
+    leftCol.prepend(panel3d);
+    panel2d.style.height = '100%';
+    panel3d.style.height = '';
+    panel3d.style.flex   = '0 0 auto';
+  } else {
+    // Restore — 2D back to left col top, 3D back to right col
+    leftCol.prepend(panel2d);
+    rightCol.prepend(panel3d);
+    panel2d.style.height = '';
+    panel3d.style.height = '100%';
+    panel3d.style.flex   = '';
+  }
+  _swapped = !_swapped;
+  resize();
+};
+
 // ── Brand polling ─────────────────────────────────────────────────────────────
 function pollBrand() {
   let attempts = 0;
@@ -211,52 +238,70 @@ window.handleGenerate = async function() {
     bar.scrollTop = bar.scrollHeight;
   };
 
-  // Estimate progress from log messages
+  // Global crawl — runs entire pipeline, ~10 min total = 600s
+  // Crawls 0 → 90% over 600s = 0.15%/s = 0.12% per 800ms tick
   let currentPct = 0;
-  let hunyuanCrawlTimer = null;
+  let currentStage = 'Starting pipeline...';
+  let globalCrawlTimer = null;
 
-  function startHunyuanCrawl() {
-    if (hunyuanCrawlTimer) return; // already running
-    // Slowly crawl from currentPct up to 88% over ~4 minutes
-    hunyuanCrawlTimer = setInterval(() => {
-      if (currentPct < 88) {
-        currentPct = Math.min(88, currentPct + 0.3);
-        setProgress(currentPct, currentPct < 40 ? 'Submitting to Hunyuan 3D...' :
-                                currentPct < 65 ? 'Building 3D model...' :
-                                                  'Applying PBR textures...');
+  function startGlobalCrawl() {
+    if (globalCrawlTimer) return;
+    globalCrawlTimer = setInterval(() => {
+      if (currentPct < 90) {
+        currentPct = Math.min(90, currentPct + 0.12);
+        setProgress(currentPct, currentStage);
       }
     }, 800);
   }
 
-  function stopHunyuanCrawl() {
-    if (hunyuanCrawlTimer) { clearInterval(hunyuanCrawlTimer); hunyuanCrawlTimer = null; }
+  function stopGlobalCrawl() {
+    if (globalCrawlTimer) { clearInterval(globalCrawlTimer); globalCrawlTimer = null; }
   }
 
   function estimateProgress(msg) {
     const m = msg.toLowerCase();
-    // NanoBanana phase: 0-15% (keyword-driven, fast)
-    if (m.includes('geometry') || m.includes('finishes') || m.includes('brand spec') || m.includes('extracting')) {
-      return { pct: 5, stage: 'Analysing floor plan...' };
+    // Use keywords only to update the stage label and nudge forward if behind
+    if (m.includes('extracting') || m.includes('geometry') || m.includes('finishes') || m.includes('brand spec')) {
+      currentStage = 'Analysing floor plan...';
+      return currentPct < 5 ? { pct: 5, stage: currentStage } : null;
     }
-    if (m.includes('nanobanana') || m.includes('nano banana') || (m.includes('render') && m.includes('start'))) {
-      return { pct: 8, stage: 'Generating styled render...' };
+    if (m.includes('attempt 1')) {
+      currentStage = 'Generating render (1/3)...';
+      return currentPct < 8 ? { pct: 8, stage: currentStage } : null;
     }
-    if (m.includes('imgbb') || m.includes('hosted') || (m.includes('upload') && !m.includes('hunyuan'))) {
-      return { pct: 13, stage: 'Uploading render...' };
+    if (m.includes('attempt 2')) {
+      currentStage = 'Generating render (2/3)...';
+      return currentPct < 28 ? { pct: 28, stage: currentStage } : null;
     }
-    if (m.includes('nb_render') || m.includes('enhanced') || m.includes('saved')) {
-      return { pct: 15, stage: 'Styled render complete' };
+    if (m.includes('attempt 3')) {
+      currentStage = 'Generating render (3/3)...';
+      return currentPct < 48 ? { pct: 48, stage: currentStage } : null;
     }
-    // Hunyuan phase: hand off to time-based crawl
-    if (m.includes('hunyuan') || m.includes('fal') || m.includes('3d model') || m.includes('in_queue') || m.includes('in_progress')) {
-      if (currentPct < 18) return { pct: 18, stage: 'Submitting to Hunyuan 3D...' };
-      startHunyuanCrawl();
+    if (m.includes('validating')) {
+      currentStage = 'Validating renders...';
+      return currentPct < 68 ? { pct: 68, stage: currentStage } : null;
+    }
+    if (m.includes('best candidate')) {
+      currentStage = 'Best render selected';
+      return currentPct < 72 ? { pct: 72, stage: currentStage } : null;
+    }
+    if (m.includes('hunyuan') || m.includes('submitting to hunyuan')) {
+      currentStage = 'Submitting to Hunyuan 3D...';
+      return currentPct < 75 ? { pct: 75, stage: currentStage } : null;
+    }
+    if (m.includes('in_queue') || m.includes('in_progress') || m.includes('building')) {
+      currentStage = 'Building 3D model...';
+      return null;
+    }
+    if (m.includes('pbr') || m.includes('texture')) {
+      currentStage = 'Applying PBR textures...';
       return null;
     }
     return null;
   }
 
   await fetch('/api/generate/start', { method: 'POST' });
+  startGlobalCrawl();
 
   const es = new EventSource('/api/generate/stream');
   es.onmessage = e => {
@@ -272,7 +317,7 @@ window.handleGenerate = async function() {
     }
     if (data.type === 'done') {
       addLine('✓ Done', 'log-done');
-      stopHunyuanCrawl();
+      stopGlobalCrawl();
       es.close();
       btn.disabled    = false;
       btn.textContent = 'Generate';
@@ -288,7 +333,7 @@ window.handleGenerate = async function() {
     }
     if (data.type === 'error') {
       addLine('✗ ' + data.msg, 'log-error');
-      stopHunyuanCrawl();
+      stopGlobalCrawl();
       es.close();
       btn.disabled    = false;
       btn.textContent = 'Generate';

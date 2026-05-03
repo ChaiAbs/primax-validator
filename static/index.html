@@ -59,9 +59,9 @@
     <!-- Left column: plan + renders + brand -->
     <div class="left-col">
 
-      <section class="panel">
-        <h2 class="panel-title">2D Render <span class="label-sub">NanoBanana</span></h2>
-        <div class="image-frame plan-frame">
+      <section class="panel" id="panel-2d">
+        <h2 class="panel-title">2D Render <span class="label-sub">NanoBanana</span> <span class="swap-hint">click to expand</span></h2>
+        <div class="image-frame plan-frame" onclick="swapPanels()">
           <img id="plan-img" src="" alt="Floor plan" />
         </div>
       </section>
@@ -82,7 +82,7 @@
 
     <!-- Right column: 3D viewer -->
     <div class="right-col">
-      <section class="panel" style="height:100%">
+      <section class="panel" id="panel-3d" style="height:100%">
         <h2 class="panel-title">3D Model <span class="label-sub">Hunyuan · GLB</span></h2>
 
         <!-- Pre-generate: plain text, no box -->
