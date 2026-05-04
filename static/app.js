@@ -10,6 +10,7 @@ const glbIdle    = document.getElementById('glb-idle');
 const pctEl      = document.getElementById('glb-pct');
 const fillEl     = document.getElementById('glb-fill');
 const stageEl    = document.getElementById('glb-stage');
+const quipEl     = document.getElementById('glb-quip');
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(window.devicePixelRatio);
@@ -50,10 +51,30 @@ window.addEventListener('resize', resize);
 
 const loader = new GLTFLoader();
 
+const _quips = [
+  { at: 10,  msg: "Reading your floor plan..." },
+  { at: 20,  msg: "Teaching the AI about your apartment..." },
+  { at: 35,  msg: "Running multiple renders, picking the best one..." },
+  { at: 50,  msg: "Halfway there — hang tight." },
+  { at: 65,  msg: "Validating the output, nearly locked in..." },
+  { at: 75,  msg: "Handing off to Hunyuan 3D — the slow part." },
+  { at: 82,  msg: "Building geometry, this takes a moment..." },
+  { at: 88,  msg: "Almost there, just applying textures..." },
+  { at: 94,  msg: "Wrapping up — shouldn't be long now." },
+];
+let _lastQuipAt = -1;
+
 function setProgress(pct, stage) {
   pctEl.textContent  = Math.round(pct) + '%';
   fillEl.style.width = Math.round(pct) + '%';
   if (stage) stageEl.textContent = stage;
+
+  // Show quip when crossing a threshold
+  const quip = [..._quips].reverse().find(q => pct >= q.at && q.at > _lastQuipAt);
+  if (quip) {
+    _lastQuipAt = quip.at;
+    quipEl.textContent = quip.msg;
+  }
 }
 
 function loadGLB(url) {
@@ -128,7 +149,7 @@ async function handleUploadFile(file) {
     if (data.error) { status.textContent = 'Error: ' + data.error; return; }
 
     const { found, preview, errors } = data;
-    status.textContent = `✓ ${found.renders} renders · plan ${found.floor_plan ? '✓' : '✗'} · brand ${found.brand ? '✓' : '✗'}`;
+    status.textContent = '';
     if (errors && errors.length) console.warn('Upload errors:', errors);
     document.getElementById('project-tag').textContent = file.name.replace('.zip', '');
     document.getElementById('btn-generate').classList.remove('hidden');
@@ -141,6 +162,9 @@ async function handleUploadFile(file) {
     // Show floor plan
     if (preview) {
       document.getElementById('plan-img').src = preview;
+    } else {
+      const planFrame = document.querySelector('.plan-frame');
+      planFrame.innerHTML = '<span style="font-size:11px;color:rgba(241,240,238,0.3);letter-spacing:0.06em">Floor plan unavailable</span>';
     }
 
     // Load renders
@@ -148,11 +172,15 @@ async function handleUploadFile(file) {
     const rendersData = await rendersRes.json();
     const grid = document.getElementById('renders-grid');
     grid.innerHTML = '';
-    rendersData.images.forEach(src => {
-      const img = document.createElement('img');
-      img.src = src;
-      grid.appendChild(img);
-    });
+    if (rendersData.images && rendersData.images.length) {
+      rendersData.images.forEach(src => {
+        const img = document.createElement('img');
+        img.src = src;
+        grid.appendChild(img);
+      });
+    } else {
+      grid.innerHTML = '<span style="font-size:11px;color:rgba(241,240,238,0.3);letter-spacing:0.06em">Renders unavailable</span>';
+    }
 
     // Poll for brand (extracted in background after upload)
     pollBrand();
@@ -206,15 +234,29 @@ function pollBrand() {
         renderBrand(data);
       }
     } catch (_) {}
-    if (attempts >= maxAttempts) clearInterval(interval);
+    if (attempts >= maxAttempts) {
+      clearInterval(interval);
+      document.getElementById('brand-card').innerHTML =
+        '<span style="font-size:11px;color:rgba(241,240,238,0.3);letter-spacing:0.06em">Brand unavailable</span>';
+    }
   }, 3000);
 }
 
 // ── Generate ──────────────────────────────────────────────────────────────────
+window.handleStop = async function() {
+  await fetch('/api/generate/stop', { method: 'POST' });
+  document.getElementById('btn-stop').disabled = true;
+  document.getElementById('btn-stop').textContent = 'Stopping...';
+};
+
 window.handleGenerate = async function() {
-  const btn = document.getElementById('btn-generate');
+  const btn     = document.getElementById('btn-generate');
+  const stopBtn = document.getElementById('btn-stop');
   btn.disabled    = true;
   btn.textContent = 'Generating...';
+  stopBtn.classList.remove('hidden');
+  stopBtn.disabled    = false;
+  stopBtn.textContent = 'Stop';
 
   const bar = document.getElementById('progress-bar');
   const log = document.getElementById('progress-log');
@@ -227,6 +269,8 @@ window.handleGenerate = async function() {
   document.querySelector('.glb-loading').style.display = '';  // ensure visible
   canvas.classList.add('hidden');
   viewerHint.classList.add('hidden');
+  _lastQuipAt = -1;
+  if (quipEl) quipEl.textContent = '';
   setProgress(0, 'Starting pipeline...');
   resize();
 
@@ -321,6 +365,7 @@ window.handleGenerate = async function() {
       es.close();
       btn.disabled    = false;
       btn.textContent = 'Generate';
+      stopBtn.classList.add('hidden');
       loadGLB(data.glb_url);
 
       // Refresh 2D render to show NanoBanana output
@@ -331,13 +376,24 @@ window.handleGenerate = async function() {
       // Load brand
       fetch('/api/brand').then(r => r.json()).then(renderBrand);
     }
+    if (data.type === 'stopped') {
+      stopGlobalCrawl();
+      es.close();
+      btn.disabled    = false;
+      btn.textContent = 'Generate';
+      stopBtn.classList.add('hidden');
+      pctEl.textContent   = 'Stopped';
+      fillEl.style.width  = '0%';
+      stageEl.textContent = 'Pipeline stopped · click Generate to restart';
+    }
     if (data.type === 'error') {
       addLine('✗ ' + data.msg, 'log-error');
       stopGlobalCrawl();
       es.close();
       btn.disabled    = false;
       btn.textContent = 'Generate';
-      stageEl.textContent = 'Pipeline error';
+      stopBtn.classList.add('hidden');
+      stageEl.textContent = 'Pipeline error · click Generate to restart';
     }
   };
 };

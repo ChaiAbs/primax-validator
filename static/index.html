@@ -23,6 +23,12 @@
             </svg>
             Generate
           </button>
+          <button class="btn btn-primary hidden" id="btn-stop" onclick="handleStop()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+            </svg>
+            Stop
+          </button>
           <span class="upload-status" id="upload-status"></span>
         </div>
       </div>
@@ -60,21 +66,18 @@
     <div class="left-col">
 
       <section class="panel" id="panel-2d">
-        <h2 class="panel-title">2D Render <span class="label-sub">NanoBanana</span> <span class="swap-hint">click to expand</span></h2>
         <div class="image-frame plan-frame" onclick="swapPanels()">
           <img id="plan-img" src="" alt="Floor plan" />
         </div>
       </section>
 
       <section class="panel">
-        <h2 class="panel-title">Renders</h2>
         <div class="renders-grid" id="renders-grid"></div>
       </section>
 
       <section class="panel" id="brand-section">
-        <h2 class="panel-title">Brand</h2>
         <div class="brand-card" id="brand-card">
-          <p class="brand-loading">Extracting brand...</p>
+          <p class="brand-loading"><span class="brand-spinner"></span>Extracting brand...</p>
         </div>
       </section>
 
@@ -83,11 +86,10 @@
     <!-- Right column: 3D viewer -->
     <div class="right-col">
       <section class="panel" id="panel-3d" style="height:100%">
-        <h2 class="panel-title">3D Model <span class="label-sub">Hunyuan · GLB</span></h2>
 
         <!-- Pre-generate: plain text, no box -->
         <div id="glb-idle" class="glb-idle">
-          Hit Generate to see 3D model
+          HIT GENERATE TO SEE THE 3D MODEL
         </div>
 
         <!-- Loading state: full card with progress -->
@@ -97,6 +99,7 @@
             <div class="glb-loading-pct" id="glb-pct">0%</div>
             <div class="glb-loading-bar"><div class="glb-loading-fill" id="glb-fill"></div></div>
             <div class="glb-loading-label" id="glb-stage">Starting pipeline</div>
+          <div class="glb-loading-quip" id="glb-quip"></div>
           </div>
           <div class="viewer-hint hidden" id="viewer-hint">Drag to rotate · Scroll to zoom · Right-drag to pan</div>
         </div>

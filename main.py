@@ -23,6 +23,7 @@ app.mount("/generated", StaticFiles(directory=str(RENDERS_OUTPUT_DIR)), name="ge
 # ── SSE progress queue ────────────────────────────────────────────────────────
 _progress_q: queue.Queue = queue.Queue()
 _pipeline_running = False
+_stop_flag = threading.Event()
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -140,6 +141,8 @@ def _run_pipeline():
         from pipeline import run_render
         result = run_render()
         _progress_q.put({"type": "done", "glb_url": "/generated/model.glb"})
+    except StopIteration:
+        _progress_q.put({"type": "stopped"})
     except Exception as e:
         _progress_q.put({"type": "error", "msg": str(e)})
     finally:
@@ -153,11 +156,18 @@ async def generate_start():
     if _pipeline_running:
         return JSONResponse({"error": "Already running"}, status_code=409)
     _pipeline_running = True
+    _stop_flag.clear()
     # drain old messages
     while not _progress_q.empty():
         _progress_q.get_nowait()
     threading.Thread(target=_run_pipeline, daemon=True).start()
     return {"started": True}
+
+
+@app.post("/api/generate/stop")
+async def generate_stop():
+    _stop_flag.set()
+    return {"stopping": True}
 
 
 @app.get("/api/generate/stream")
