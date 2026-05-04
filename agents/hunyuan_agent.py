@@ -1,8 +1,8 @@
 """
-Hunyuan 3D agent.
+3D generation agent — Trellis 2 (fal-ai/trellis-2).
 
-Takes the NanoBanana output URL (already hosted), sends it directly to
-fal-ai/hunyuan-3d/v3.1/pro/image-to-3d, and downloads the resulting GLB.
+Takes the NanoBanana output URL (already hosted), sends it to Trellis 2,
+and downloads the resulting GLB.
 """
 
 import urllib.request
@@ -12,19 +12,25 @@ import fal_client
 
 
 def generate_3d(image_url: str, output_path: Path) -> Path:
-    print(f"Submitting to Hunyuan 3D: {image_url[:60]}...", flush=True)
+    print(f"Submitting to Trellis 2: {image_url[:60]}...", flush=True)
     result = fal_client.subscribe(
-        "fal-ai/hunyuan-3d/v3.1/pro/image-to-3d",
+        "fal-ai/trellis-2",
         arguments={
-            "input_image_url": image_url,
-            "generate_type":   "Normal",
-            "face_count":      500000,
-            "enable_pbr":      True,
+            "image_url": image_url,
         },
         with_logs=True,
     )
 
-    glb_url = result["model_glb"]["url"]
+    print(f"  Trellis result keys: {list(result.keys())}", flush=True)
+
+    # Trellis returns model_mesh with GLB
+    if result.get("model_mesh"):
+        glb_url = result["model_mesh"]["url"]
+    elif result.get("model_glb"):
+        glb_url = result["model_glb"]["url"]
+    else:
+        raise RuntimeError(f"No GLB in Trellis result: {result}")
+
     print(f"  GLB ready: {glb_url[:60]}...", flush=True)
     urllib.request.urlretrieve(glb_url, str(output_path))
     return output_path
