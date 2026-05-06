@@ -23,12 +23,7 @@
             </svg>
             Generate
           </button>
-          <button class="btn hidden" id="btn-restart" onclick="window.location.reload()">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/>
-            </svg>
-            Restart
-          </button>
+          <button class="btn hidden" id="btn-restart" onclick="window.location.reload()">Restart</button>
           <span class="upload-status" id="upload-status"></span>
         </div>
       </div>
@@ -47,14 +42,7 @@
       <p class="welcome-eyebrow">PRiMAX · Apartment Visualiser</p>
       <h1 class="welcome-title">Turn your floor plan<br/>into a cinematic video</h1>
       <p class="welcome-sub">Upload a zip containing your 2D plan, renders, and brand guide to get started.</p>
-      <label class="btn btn-primary welcome-btn" for="zip-input-welcome">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-          <polyline points="17 8 12 3 7 8"/>
-          <line x1="12" y1="3" x2="12" y2="15"/>
-        </svg>
-        Attach Files
-      </label>
+      <label class="btn btn-primary welcome-btn" id="btn-attach" for="zip-input-welcome">Attach Files</label>
       <input type="file" id="zip-input-welcome" accept=".zip" style="display:none" onchange="handleUpload(this)" />
     </div>
   </div>

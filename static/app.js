@@ -2,8 +2,8 @@
 async function handleUploadFile(file) {
   if (!file) return;
 
-  const status = document.getElementById('upload-status');
-  status.textContent = 'Uploading...';
+  const attachBtn = document.getElementById('btn-attach');
+  if (attachBtn) attachBtn.textContent = 'Uploading...';
 
   const form = new FormData();
   form.append('file', file);
@@ -11,10 +11,13 @@ async function handleUploadFile(file) {
   try {
     const res  = await fetch('/api/upload', { method: 'POST', body: form });
     const data = await res.json();
-    if (data.error) { status.textContent = 'Error: ' + data.error; return; }
+    if (data.error) {
+      if (attachBtn) attachBtn.textContent = 'Attach Files';
+      return;
+    }
 
     const { found, preview, errors } = data;
-    status.textContent = '';
+    if (attachBtn) attachBtn.textContent = 'Attach Files';
     if (errors && errors.length) console.warn('Upload errors:', errors);
     document.getElementById('project-tag').textContent = file.name.replace('.zip', '');
     document.getElementById('btn-generate').classList.remove('hidden');
@@ -50,7 +53,7 @@ async function handleUploadFile(file) {
     pollBrand();
 
   } catch (e) {
-    status.textContent = 'Upload failed';
+    if (attachBtn) attachBtn.textContent = 'Attach Files';
     console.error(e);
   }
 }
