@@ -6,3 +6,4 @@ pillow
 openai
 pymupdf
 fal-client
+python-multipart
