@@ -213,13 +213,15 @@ window.handleStop = async function() {
 };
 
 window.handleGenerate = async function() {
-  const btn     = document.getElementById('btn-generate');
-  const stopBtn = document.getElementById('btn-stop');
+  const btn         = document.getElementById('btn-generate');
+  const stopBtn     = document.getElementById('btn-stop');
+  const restartBtn  = document.getElementById('btn-restart');
   btn.disabled    = true;
   btn.textContent = 'Generating...';
   stopBtn.classList.remove('hidden');
   stopBtn.disabled    = false;
   stopBtn.textContent = 'Stop';
+  restartBtn.classList.add('hidden');
 
   const bar = document.getElementById('progress-bar');
   const log = document.getElementById('progress-log');
@@ -321,8 +323,9 @@ window.handleGenerate = async function() {
       setProgress(100, 'Done');
       es.close();
       btn.disabled    = false;
-      btn.textContent = 'Generate';
+      btn.textContent = 'Regenerate';
       stopBtn.classList.add('hidden');
+      restartBtn.classList.remove('hidden');
 
       // Fetch NanoBanana 2D render for the strip, keep plan-img as original
       fetch('/api/results').then(r => r.json()).then(d => {
@@ -336,8 +339,9 @@ window.handleGenerate = async function() {
       stopGlobalCrawl();
       es.close();
       btn.disabled    = false;
-      btn.textContent = 'Generate';
+      btn.textContent = 'Regenerate';
       stopBtn.classList.add('hidden');
+      restartBtn.classList.remove('hidden');
       pctEl.textContent   = 'Stopped';
       fillEl.style.width  = '0%';
       stageEl.textContent = 'Pipeline stopped · click Generate to restart';
@@ -347,9 +351,10 @@ window.handleGenerate = async function() {
       stopGlobalCrawl();
       es.close();
       btn.disabled    = false;
-      btn.textContent = 'Generate';
+      btn.textContent = 'Regenerate';
       stopBtn.classList.add('hidden');
-      stageEl.textContent = 'Pipeline error · click Generate to restart';
+      restartBtn.classList.remove('hidden');
+      stageEl.textContent = 'Pipeline error · click Regenerate to retry';
     }
   };
 };
