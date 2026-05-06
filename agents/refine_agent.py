@@ -7,8 +7,6 @@ import urllib.request
 from pathlib import Path
 
 import anthropic
-import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance
 
 from config import MODEL_FAST, CACHE_DIR, RENDERS_OUTPUT_DIR
 
@@ -192,16 +190,9 @@ def render_from_floor_plan(geometry_spec: dict, finishes_spec: dict, brand_spec:
     print(f"  Downloading result from {img_url[:60]}...", flush=True)
     img_bytes = _download_image(img_url)
 
-    out_path = RENDERS_OUTPUT_DIR / "nb_render.png"
-    out_path.write_bytes(img_bytes)
-    print(f"  Saved raw render to {out_path}", flush=True)
-
-    print("  Applying depth cues...", flush=True)
-    enhanced = _apply_depth_cues(out_path)
-
     enhanced_path = RENDERS_OUTPUT_DIR / "nb_render_enhanced.png"
-    enhanced.save(enhanced_path)
-    print(f"  Saved enhanced render to {enhanced_path}", flush=True)
+    enhanced_path.write_bytes(img_bytes)
+    print(f"  Saved render to {enhanced_path}", flush=True)
 
     buf = base64.b64encode(enhanced_path.read_bytes()).decode("utf-8")
     return buf, img_url
