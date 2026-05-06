@@ -84,6 +84,12 @@ window.swapPanels = function() {
 // ── Strip ↔ Main swap ─────────────────────────────────────────────────────────
 let _activeStripId = null;
 
+const _titles = {
+  'strip-nb':   '2.5D Render',
+  'strip-snap': '3D Render',
+  'main':       '3D Video',
+};
+
 window.handleStripClick = function(imgId, stripId) {
   if (_activeStripId === stripId) {
     swapMainBack();
@@ -96,7 +102,6 @@ window.swapToMain = function(imgId, stripId) {
   const src = document.getElementById(imgId).src;
   if (!src) return;
 
-  // Restore previous strip if something else was expanded
   if (_activeStripId && _activeStripId !== stripId) swapMainBack();
 
   const video       = document.getElementById('output-video');
@@ -115,6 +120,10 @@ window.swapToMain = function(imgId, stripId) {
   stripVideo.src = videoSrc;
   stripImg.classList.add('hidden');
   stripVideo.classList.remove('hidden');
+
+  // Swap titles
+  document.getElementById('title-main').textContent        = _titles[stripId];
+  document.getElementById('title-' + stripId).textContent  = _titles['main'];
 
   _activeStripId = stripId;
 };
@@ -136,6 +145,10 @@ window.swapMainBack = function() {
   document.getElementById(stripVideoId).classList.add('hidden');
   document.getElementById(stripVideoId).src = '';
   document.getElementById(imgId).classList.remove('hidden');
+
+  // Restore titles
+  document.getElementById('title-main').textContent             = _titles['main'];
+  document.getElementById('title-' + _activeStripId).textContent = _titles[_activeStripId];
 
   _activeStripId = null;
 };
@@ -206,21 +219,11 @@ function showVideoResult(videoUrl, frameUrl, nbImageSrc) {
 }
 
 // ── Generate ──────────────────────────────────────────────────────────────────
-window.handleStop = async function() {
-  await fetch('/api/generate/stop', { method: 'POST' });
-  document.getElementById('btn-stop').disabled = true;
-  document.getElementById('btn-stop').textContent = 'Stopping...';
-};
-
 window.handleGenerate = async function() {
   const btn         = document.getElementById('btn-generate');
-  const stopBtn     = document.getElementById('btn-stop');
   const restartBtn  = document.getElementById('btn-restart');
   btn.disabled    = true;
   btn.textContent = 'Generating...';
-  stopBtn.classList.remove('hidden');
-  stopBtn.disabled    = false;
-  stopBtn.textContent = 'Stop';
   restartBtn.classList.add('hidden');
 
   const bar = document.getElementById('progress-bar');
@@ -324,7 +327,6 @@ window.handleGenerate = async function() {
       es.close();
       btn.disabled    = false;
       btn.textContent = 'Regenerate';
-      stopBtn.classList.add('hidden');
       restartBtn.classList.remove('hidden');
 
       // Fetch NanoBanana 2D render for the strip, keep plan-img as original
@@ -340,7 +342,6 @@ window.handleGenerate = async function() {
       es.close();
       btn.disabled    = false;
       btn.textContent = 'Regenerate';
-      stopBtn.classList.add('hidden');
       restartBtn.classList.remove('hidden');
       pctEl.textContent   = 'Stopped';
       fillEl.style.width  = '0%';
@@ -352,11 +353,18 @@ window.handleGenerate = async function() {
       es.close();
       btn.disabled    = false;
       btn.textContent = 'Regenerate';
-      stopBtn.classList.add('hidden');
       restartBtn.classList.remove('hidden');
       stageEl.textContent = 'Pipeline error · click Regenerate to retry';
     }
   };
+};
+
+// ── Download snapshot ─────────────────────────────────────────────────────────
+window.handleDownloadSnapshot = function() {
+  const count = Math.max(1, parseInt(document.getElementById('download-count').value) || 1);
+  const a = document.createElement('a');
+  a.href = `/api/download/snapshot?count=${count}`;
+  a.click();
 };
 
 function renderBrand(brand) {

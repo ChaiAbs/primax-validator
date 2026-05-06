@@ -16,6 +16,56 @@ load_dotenv("/Users/chai/Documents/primax_validator/.env", override=True)
 from config import DATA_DIR, CACHE_DIR, RENDERS_OUTPUT_DIR, RENDER_FILES, RENDERS_DIR
 
 app = FastAPI(title="PRiMAX Visualiser")
+
+
+def _crop_to_floor_plan(png_bytes: bytes) -> bytes:
+    """
+    Auto-crop a floor plan PNG to remove any brand/info panel on the right.
+    Strategy: scan columns right→left; find the rightmost block of pure-white
+    columns (the margin between floor plan and brand panel) — crop just before
+    the brand panel content starts to the right of that white gap.
+    Falls back to the original if no clear boundary is found.
+    """
+    import numpy as np
+    from PIL import Image
+
+    img  = Image.open(io.BytesIO(png_bytes)).convert("RGB")
+    arr  = np.array(img, dtype=np.float32)
+    h, w = arr.shape[:2]
+
+    gray    = arr.mean(axis=2)      # h x w
+    col_std = gray.std(axis=0)      # per-column std
+
+    # "White column" = std < 5 (essentially uniform white margin)
+    # Scan right half only; find the rightmost run of white columns followed
+    # by non-white content (the brand panel)
+    white_threshold = 5.0
+    min_gap         = int(w * 0.05)   # gap must be at least 5% of width
+
+    crop_x = w
+    in_white = False
+    white_start = w
+
+    for x in range(w - 1, w // 3, -1):
+        is_white = col_std[x] < white_threshold
+        if is_white and not in_white:
+            white_start = x
+            in_white = True
+        elif not is_white and in_white:
+            # End of a white run — check it's wide enough to be the margin
+            gap_width = white_start - x
+            if gap_width >= min_gap:
+                crop_x = white_start + 1
+                break
+            in_white = False
+
+    if crop_x >= w - 10:
+        return png_bytes  # no clear boundary found
+
+    cropped = img.crop((0, 0, crop_x, h))
+    buf = io.BytesIO()
+    cropped.save(buf, format="PNG")
+    return buf.getvalue()
 app.mount("/static",    StaticFiles(directory="static"),          name="static")
 app.mount("/generated", StaticFiles(directory=str(RENDERS_OUTPUT_DIR)), name="generated")
 app.mount("/cache",     StaticFiles(directory=str(CACHE_DIR)),    name="cache")
@@ -86,14 +136,21 @@ async def upload(file: UploadFile = File(...)):
 
         # Convert floor plan PDF → PNG for preview + NanoBanana
         import fitz
+        import numpy as np
+        from PIL import Image
+
         pdf_path = DATA_DIR / "2D Plan.pdf"
         if pdf_path.exists():
             doc  = fitz.open(str(pdf_path))
             page = doc[0]
             pix  = page.get_pixmap(matrix=fitz.Matrix(3, 3))
             png  = pix.tobytes("png")
+            # Save full version for preview
             (CACHE_DIR / "floor_plan.png").write_bytes(png)
             preview_b64 = base64.b64encode(png).decode()
+            # Save cropped version for NanoBanana
+            cropped = _crop_to_floor_plan(png)
+            (CACHE_DIR / "floor_plan_clean.png").write_bytes(cropped)
         else:
             preview_b64 = None
 
@@ -227,3 +284,31 @@ async def get_results():
         result["plan"] = f"data:image/png;base64,{base64.b64encode(plan_path.read_bytes()).decode()}"
 
     return result
+
+
+@app.get("/api/download/snapshot")
+async def download_snapshot(count: int = 1):
+    frame_path = RENDERS_OUTPUT_DIR / "happyhorse_frame.png"
+    if not frame_path.exists():
+        return JSONResponse({"error": "No snapshot available"}, status_code=404)
+
+    img_bytes = frame_path.read_bytes()
+
+    if count <= 1:
+        return StreamingResponse(
+            io.BytesIO(img_bytes),
+            media_type="image/png",
+            headers={"Content-Disposition": "attachment; filename=3d_render.png"}
+        )
+
+    # Zip N copies
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for i in range(1, count + 1):
+            zf.writestr(f"3d_render_{i:02d}.png", img_bytes)
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename=3d_renders_{count}x.zip"}
+    )

@@ -105,24 +105,38 @@
         <!-- Results: left strip (NB render + snapshot) | video (2/3) -->
         <div id="video-result" class="video-result hidden">
 
-          <!-- Left strip: NanoBanana 2D + snapshot -->
+          <!-- Left strip: NanoBanana 2.5D + 3D render -->
           <div class="result-strip">
-            <p class="panel-title">2D Render</p>
+            <p class="panel-title" id="title-strip-nb">2.5D Render</p>
             <div id="strip-nb" class="strip-frame swap-thumb" onclick="handleStripClick('nb-render-img', 'strip-nb')" title="Click to expand">
               <img id="nb-render-img" src="" alt="2.5D render" />
-              <video id="strip-video-nb" class="strip-video hidden" autoplay loop muted playsinline></video>
+              <video id="strip-video-nb" class="strip-video hidden" autoplay muted playsinline></video>
             </div>
-            <p class="panel-title" style="margin-top:12px">Snapshot <span class="label-sub">3.9 s</span></p>
+            <p class="panel-title" id="title-strip-snap" style="margin-top:12px">3D Render</p>
             <div id="strip-snap" class="strip-frame swap-thumb" onclick="handleStripClick('snapshot-img', 'strip-snap')" title="Click to expand">
-              <img id="snapshot-img" src="" alt="3D snapshot" />
-              <video id="strip-video-snap" class="strip-video hidden" autoplay loop muted playsinline></video>
+              <img id="snapshot-img" src="" alt="3D render" />
+              <video id="strip-video-snap" class="strip-video hidden" autoplay muted playsinline></video>
+            </div>
+            <div class="download-row">
+              <input type="text" inputmode="numeric" pattern="[0-9]*" id="download-count" value="1" onkeypress="return /[0-9]/.test(event.key)" onpaste="return false" />
+              <button class="btn" onclick="handleDownloadSnapshot()">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Download
+              </button>
             </div>
           </div>
 
           <!-- Video: 2/3 width -->
-          <div class="video-main" id="video-main">
-            <video id="output-video" autoplay loop muted playsinline controls></video>
-            <img id="main-expanded-img" class="hidden" src="" alt="Expanded view" onclick="swapMainBack()" />
+          <div class="video-main-wrapper">
+            <p class="panel-title" id="title-main">3D Video</p>
+            <div class="video-main" id="video-main">
+              <video id="output-video" autoplay muted playsinline controls></video>
+              <img id="main-expanded-img" class="hidden" src="" alt="Expanded view" onclick="swapMainBack()" />
+            </div>
           </div>
 
         </div>

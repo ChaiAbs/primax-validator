@@ -221,9 +221,21 @@ def run_render(max_attempts: int = 3) -> dict:
     if _stop_flag.is_set():
         raise StopIteration("Pipeline stopped by user")
 
-    # Generate cinematic video via Happy Horse, extract PNG snapshot at 3.5s
+    # Convert best render to JPEG and re-upload to imgbb for a fresh stable URL
+    print(f"Re-uploading best render for Happy Horse...", flush=True)
+    import io as _io
+    from PIL import Image as _Image
+    _img = _Image.open(RENDERS_OUTPUT_DIR / "nb_render_enhanced.png").convert("RGB")
+    _jpg_buf = _io.BytesIO()
+    _img.save(_jpg_buf, format="JPEG", quality=95)
+    _jpg_path = RENDERS_OUTPUT_DIR / "nb_render_enhanced.jpg"
+    _jpg_path.write_bytes(_jpg_buf.getvalue())
+    fresh_url = _upload_imgbb(_jpg_path)
+    print(f"  Fresh URL: {fresh_url[:60]}...", flush=True)
+
+    # Generate cinematic video via Happy Horse, extract PNG snapshot at 3.9s
     print(f"Sending best render to Happy Horse for video generation...", flush=True)
-    frame_path = generate_video_frame(best_url, frame_time=3.9)
+    frame_path = generate_video_frame(fresh_url, frame_time=3.9)
     video_path = RENDERS_OUTPUT_DIR / "happyhorse.mp4"
     print(f"  Video ready, snapshot saved: {frame_path}", flush=True)
 
