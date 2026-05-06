@@ -367,11 +367,14 @@ main {
   gap: 6px;
   align-items: center;
   margin-top: 8px;
+  flex-wrap: nowrap;
+  width: 100%;
 }
 
-.download-row input[type="number"] {
+.download-row input[type="text"] {
   width: 52px;
-  padding: 6px 8px;
+  flex-shrink: 0;
+  padding: 8px 8px;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 100px;
@@ -379,15 +382,17 @@ main {
   font-size: 12px;
   font-family: inherit;
   text-align: center;
+  outline: none;
+  backdrop-filter: blur(8px);
 }
 
-.download-row input[type="number"]::-webkit-inner-spin-button,
-.download-row input[type="number"]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
+.download-row input[type="text"]:focus {
+  border-color: rgba(255,255,255,0.2);
 }
-.download-row input[type="number"] {
-  -moz-appearance: textfield;
+
+.download-row .btn {
+  flex: 1;
+  justify-content: center;
 }
 
 .swap-thumb {

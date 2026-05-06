@@ -1,0 +1,183 @@
+{
+  "apartment": "1.01",
+  "level": "1",
+  "total_area_m2": 115,
+  "internal_area_m2": 97,
+  "external_area_m2": 18,
+  "bounding_box": {
+    "width_m": 10.6,
+    "depth_m": 11.1
+  },
+  "rooms": [
+    {
+      "name": "Dining",
+      "width_m": 3.8,
+      "depth_m": 3.0,
+      "area_m2": 11.4,
+      "x_m": 0.0,
+      "y_m": 0.0,
+      "column": 0,
+      "row": 0,
+      "type": "internal",
+      "adjacent": {
+        "above": "exterior",
+        "below": "Kitchen",
+        "left": "exterior",
+        "right": "Living"
+      }
+    },
+    {
+      "name": "Living",
+      "width_m": 3.8,
+      "depth_m": 3.3,
+      "area_m2": 12.54,
+      "x_m": 3.8,
+      "y_m": 0.0,
+      "column": 1,
+      "row": 0,
+      "type": "internal",
+      "adjacent": {
+        "above": "exterior",
+        "below": "Bed 01",
+        "left": "Dining",
+        "right": "Terrace 1"
+      }
+    },
+    {
+      "name": "Terrace 1",
+      "width_m": 4.6,
+      "depth_m": 2.1,
+      "area_m2": 9.66,
+      "x_m": 7.6,
+      "y_m": 0.0,
+      "column": 2,
+      "row": 0,
+      "type": "external",
+      "adjacent": {
+        "above": "exterior",
+        "below": "Terrace 2",
+        "left": "Living",
+        "right": "exterior"
+      }
+    },
+    {
+      "name": "Kitchen",
+      "width_m": 2.8,
+      "depth_m": 2.7,
+      "area_m2": 7.56,
+      "x_m": 0.0,
+      "y_m": 3.0,
+      "column": 0,
+      "row": 1,
+      "type": "internal",
+      "adjacent": {
+        "above": "Dining",
+        "below": "Bath",
+        "left": "exterior",
+        "right": "Bed 01"
+      }
+    },
+    {
+      "name": "Bed 01",
+      "width_m": 3.0,
+      "depth_m": 3.0,
+      "area_m2": 9.0,
+      "x_m": 3.8,
+      "y_m": 3.3,
+      "column": 1,
+      "row": 1,
+      "type": "internal",
+      "adjacent": {
+        "above": "Living",
+        "below": "Bed 02",
+        "left": "Kitchen",
+        "right": "Terrace 2"
+      }
+    },
+    {
+      "name": "Terrace 2",
+      "width_m": 3.7,
+      "depth_m": 2.7,
+      "area_m2": 9.99,
+      "x_m": 7.6,
+      "y_m": 2.1,
+      "column": 2,
+      "row": 1,
+      "type": "external",
+      "adjacent": {
+        "above": "Terrace 1",
+        "below": "Bed 03",
+        "left": "Bed 01",
+        "right": "exterior"
+      }
+    },
+    {
+      "name": "Bath",
+      "width_m": 2.8,
+      "depth_m": 1.5,
+      "area_m2": 4.2,
+      "x_m": 0.0,
+      "y_m": 5.7,
+      "column": 0,
+      "row": 2,
+      "type": "internal",
+      "adjacent": {
+        "above": "Kitchen",
+        "below": "Laundry",
+        "left": "exterior",
+        "right": "Bed 02"
+      }
+    },
+    {
+      "name": "Bed 02",
+      "width_m": 3.0,
+      "depth_m": 3.0,
+      "area_m2": 9.0,
+      "x_m": 3.8,
+      "y_m": 6.3,
+      "column": 1,
+      "row": 2,
+      "type": "internal",
+      "adjacent": {
+        "above": "Bed 01",
+        "below": "Ensuite",
+        "left": "Bath",
+        "right": "Terrace 2"
+      }
+    },
+    {
+      "name": "Laundry",
+      "width_m": 1.5,
+      "depth_m": 0.75,
+      "area_m2": 1.13,
+      "x_m": 0.0,
+      "y_m": 7.2,
+      "column": 0,
+      "row": 3,
+      "type": "internal",
+      "adjacent": {
+        "above": "Bath",
+        "below": "exterior",
+        "left": "exterior",
+        "right": "Store"
+      }
+    },
+    {
+      "name": "Store",
+      "width_m": 1.5,
+      "depth_m": 0.75,
+      "area_m2": 1.13,
+      "x_m": 1.5,
+      "y_m": 7.2,
+      "column": 0,
+      "row": 3,
+      "type": "internal",
+      "adjacent": {
+        "above": "Bath",
+        "below": "exterior",
+        "left": "Laundry",
+        "right": "Ensuite"
+      }
+    }
+  ]
+}

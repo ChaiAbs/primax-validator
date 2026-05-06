@@ -1,1 +1,74 @@
-{"project": "Ascent, Tallawong Road, Rouse Hill", "brand_identity": {"primary_colours": [{"name": "Deep Plum", "hex": "#410e2b", "usage": "Primary brand colour, logo, dominant UI elements"}, {"name": "Soft Lavender", "hex": "#ad95b7", "usage": "Secondary accent, backgrounds, supporting palette"}, {"name": "Pale Cream", "hex": "#f0ece0", "usage": "Background, negative space, clean base tone"}, {"name": "Light Lilac", "hex": "#e4d4ee", "usage": "Tertiary accent, subtle washes, header backgrounds"}], "typography": {"heading": "Crista", "subheading": "Liberation Sans (Bold/Caps)", "body": "Liberation Sans"}, "tone_of_voice": "Refined, aspirational and calm \u2014 emphasising intelligent design, natural light and considered living without hyperbole", "positioning": "Boutique residential development offering elevated, light-filled apartment living within a leafy natural setting"}, "presentation_style": {"mood": "Warm, sun-soaked and serene \u2014 balancing natural greenery with sophisticated interior comfort", "lighting": "Abundant natural light, soft and diffused, entering through large glazed openings; warm golden tones with no harsh shadows", "accent_colours": [{"hex": "#410e2b", "where": "Decorative styling props, cushions, artwork, feature furniture pieces"}, {"hex": "#ad95b7", "where": "Soft furnishings, floral arrangements, linen textures"}, {"hex": "#e4d4ee", "where": "Sheer curtains, background wall tones, subtle decorative layering"}], "staging_approach": "Tastefully appointed interiors styled with restraint \u2014 natural materials, leafy botanical elements, oversized glazing as a visual hero; balconies and outdoor connection emphasised", "key_descriptors": ["sun-soaked", "leafy outlook", "natural light", "spacious", "glass-embraced", "refined", "tasteful", "sanctuary"]}, "design_principles": ["Let natural light be the primary design element in every render", "Emphasise indoor-outdoor connection through glazing, sliding doors and balconies", "Use the plum and lavender palette sparingly as accent, never overwhelming the neutral base", "Maintain a sense of calm spaciousness \u2014 avoid visual clutter in staging", "Botanical and leafy elements should appear in both interiors and exterior context shots", "Typography hierarchy should be clear: Crista for impact headings, Liberation Sans for all supporting text", "Positioning should always feel elevated but accessible \u2014 aspirational without being cold"]}
+{
+  "project": "Ascent Tallawong Road Rouse Hill",
+  "brand_identity": {
+    "primary_colours": [
+      {
+        "name": "Deep Plum",
+        "hex": "#410e2b",
+        "usage": "Primary brand colour, logo, dominant UI elements"
+      },
+      {
+        "name": "Soft Lavender",
+        "hex": "#ad95b7",
+        "usage": "Secondary colour, supporting backgrounds and accents"
+      },
+      {
+        "name": "Light Lilac",
+        "hex": "#e4d4ee",
+        "usage": "Tertiary accent, subtle backgrounds and highlights"
+      },
+      {
+        "name": "Warm Cream",
+        "hex": "#f0ece0",
+        "usage": "Background tone, clean neutral base for layouts"
+      }
+    ],
+    "typography": {
+      "heading": "Crista",
+      "subheading": "Liberation Sans (Bold/Caps)",
+      "body": "Liberation Sans"
+    },
+    "tone_of_voice": "Refined, aspirational and warmly inviting \u2014 emphasising intelligent design, natural light and leafy surroundings with understated elegance",
+    "positioning": "Premium residential apartments offering thoughtfully designed, light-filled spaces in a natural setting, targeting families and lifestyle-conscious buyers in Sydney's northwest growth corridor"
+  },
+  "presentation_style": {
+    "mood": "Sun-soaked, serene and sophisticated \u2014 balancing natural warmth with contemporary refinement",
+    "lighting": "Abundant natural light as the hero; large glazed openings, soft diffused daylight washing interiors, warm sun-drenched tones with gentle shadow depth",
+    "accent_colours": [
+      {
+        "hex": "#410e2b",
+        "where": "Soft furnishing accents, cushions, throws, decorative objects within styled scenes"
+      },
+      {
+        "hex": "#ad95b7",
+        "where": "Floral arrangements, artwork, subtle textile details to echo brand palette"
+      },
+      {
+        "hex": "#e4d4ee",
+        "where": "Sheer curtains, light linen textiles, glassware and translucent styling elements"
+      }
+    ],
+    "staging_approach": "Tastefully appointed interiors with a curated, lifestyle-led aesthetic; emphasise oversized windows and glass balconies, incorporate leafy outdoor views as a backdrop, use natural materials and soft neutral furnishings punctuated by plum and lavender accents",
+    "key_descriptors": [
+      "sun-soaked",
+      "light-filled",
+      "tastefully appointed",
+      "leafy outlook",
+      "spacious",
+      "glass-embraced",
+      "natural",
+      "refined",
+      "sanctuary",
+      "modern living"
+    ]
+  },
+  "design_principles": [
+    "Intelligent design that maximises perceived space through glazing and open planning",
+    "Natural light as a primary design element \u2014 large sliding doors, oversized windows and glass balconies",
+    "Seamless indoor-outdoor connection with leafy green outlooks taking centre stage",
+    "Colour palette draws directly from nature \u2014 deep berry, soft lavender, warm cream",
+    "Typography pairing balances classic serif elegance (Crista) with clean modern readability (Liberation Sans)",
+    "Brand applications maintain consistent plum-dominant identity across digital and print touchpoints",
+    "Staging and renders should foreground lifestyle and sanctuary qualities over specification"
+  ]
+}

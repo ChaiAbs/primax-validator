@@ -9,8 +9,6 @@ import anthropic
 from agents.geometry_agent import extract_geometry_spec
 from agents.spec_agent import extract_project_spec
 from agents.brand_agent import extract_brand_spec
-from agents.generation_agent import generate_candidates, select_candidate
-from agents.layout_agent import extract_layout
 from config import CACHE_DIR, RENDERS_OUTPUT_DIR
 
 
@@ -60,94 +58,6 @@ def extract_specs(use_cache: bool = True) -> tuple[dict, dict, dict]:
     print(f"  Specs extracted in {time.time() - t0:.1f}s")
     return geometry_spec, finishes_spec, brand_spec
 
-
-def run_generation(use_cache: bool = True) -> dict:
-    """
-    Step 1 — extract specs (parallel, cached)
-    Step 2 — build prompt + generate isometric render via NanoBanana
-    Returns {prompt, task_id, image_url, path, filename}.
-    """
-    t0 = time.time()
-    geometry_spec, finishes_spec, brand_spec = extract_specs(use_cache)
-
-    print(f"Generating {3} candidates in parallel via NanoBanana...")
-    t1 = time.time()
-    result = generate_candidates(geometry_spec, finishes_spec, brand_spec)
-    print(f"  Generation done in {time.time() - t1:.1f}s")
-    print(f"Total: {time.time() - t0:.1f}s")
-    result["specs"] = {"geometry": geometry_spec, "finishes": finishes_spec, "brand": brand_spec}
-    return result
-
-
-def run_select(index: int) -> dict:
-    """Lock in the user's chosen candidate as the canonical output."""
-    from agents.generation_agent import select_candidate
-    geo = json.loads((CACHE_DIR / "geometry.json").read_text())
-    fin = json.loads((CACHE_DIR / "finishes.json").read_text())
-    brd = json.loads((CACHE_DIR / "brand.json").read_text())
-    select_candidate(index, geo, fin, brd)
-    return {"selected": index}
-
-
-def _room_type(name: str) -> str:
-    n = name.lower()
-    if any(x in n for x in ["bath", "ensuite", "laundry", "wc", "toilet"]):
-        return "wet"
-    if "kitchen" in n:
-        return "kitchen"
-    if any(x in n for x in ["bed", "master"]):
-        return "bedroom"
-    if "living" in n or "lounge" in n:
-        return "living"
-    if "dining" in n:
-        return "dining"
-    if any(x in n for x in ["terrace", "balcony", "deck"]):
-        return "external"
-    if "store" in n or "storage" in n:
-        return "storage"
-    return "generic"
-
-
-def build_scene(use_cache: bool = True) -> dict:
-    """
-    Extract specs + layout, merge into a Three.js-ready scene description.
-    Returns {rooms, finishes, bounds, specs}.
-    """
-    geometry_spec, finishes_spec, brand_spec = extract_specs(use_cache)
-
-    print("Extracting room layout from floor plan...")
-    layout = extract_layout(geometry_spec)
-
-    # Normalise names for matching (strip spaces, lowercase)
-    def _norm(s): return s.lower().replace(" ", "")
-    pos_map = {_norm(r["name"]): r for r in layout["rooms"]}
-    rooms = []
-    for room in geometry_spec["rooms"]:
-        name = room["name"]
-        pos  = pos_map.get(_norm(name), {})
-        rooms.append({
-            "name":       name,
-            "x_m":        pos.get("x_m", pos.get("x", 0.0)),
-            "y_m":        pos.get("y_m", pos.get("y", 0.0)),
-            "width_m":    room["width_m"],
-            "depth_m":    room["depth_m"],
-            "is_external": room.get("type") == "external",
-            "type":       _room_type(name),
-        })
-
-    max_x = max(r["x_m"] + r["width_m"] for r in rooms)
-    max_y = max(r["y_m"] + r["depth_m"] for r in rooms)
-
-    return {
-        "rooms":    rooms,
-        "finishes": finishes_spec.get("finishes", finishes_spec),
-        "bounds":   {"width_m": max_x, "depth_m": max_y},
-        "specs": {
-            "geometry": geometry_spec,
-            "finishes": finishes_spec,
-            "brand":    brand_spec,
-        },
-    }
 
 
 def run_render(max_attempts: int = 3) -> dict:
