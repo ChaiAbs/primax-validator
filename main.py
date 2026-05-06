@@ -82,6 +82,16 @@ async def index():
     return Path("static/index.html").read_text()
 
 
+@app.head("/")
+async def index_head():
+    return HTMLResponse(content="", status_code=200)
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
 # ── Upload zip ────────────────────────────────────────────────────────────────
 @app.post("/api/upload")
 async def upload(file: UploadFile = File(...)):
