@@ -85,7 +85,7 @@ Return JSON only:
 
     response = client.messages.create(
         model=MODEL_SMART,
-        max_tokens=1000,
+        max_tokens=4096,
         messages=[{"role": "user", "content": content}]
     )
 

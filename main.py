@@ -167,7 +167,9 @@ async def upload(file: UploadFile = File(...)):
                 brand  = extract_brand_spec(client)
                 (CACHE_DIR / "brand.json").write_text(json.dumps(brand))
             except Exception as e:
-                print(f"Brand extraction error: {e}")
+                print(f"Brand extraction error: {e}", flush=True)
+                # Write error state so UI stops polling
+                (CACHE_DIR / "brand.json").write_text(json.dumps({"error": str(e)}))
         threading.Thread(target=_extract_brand, daemon=True).start()
 
         return {

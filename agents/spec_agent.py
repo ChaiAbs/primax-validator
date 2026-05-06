@@ -74,7 +74,7 @@ Return ONLY valid JSON in this exact format:
 
     response = client.messages.create(
         model=MODEL_FAST,
-        max_tokens=1500,
+        max_tokens=4096,
         messages=[{"role": "user", "content": image_blocks}]
     )
 

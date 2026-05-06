@@ -19,7 +19,7 @@ def extract_geometry_spec(client: anthropic.Anthropic) -> dict:
     # Pass 1 — extract dimensions and describe the grid layout in plain English
     pass1 = client.messages.create(
         model=MODEL_SMART,
-        max_tokens=1200,
+        max_tokens=4096,
         messages=[{
             "role": "user",
             "content": [
@@ -58,7 +58,7 @@ Be precise. Use the labeled dimensions exactly as written on the plan."""
     # Pass 2 — derive x_m/y_m coordinates from column/row structure + known dimensions
     pass2 = client.messages.create(
         model=MODEL_SMART,
-        max_tokens=1200,
+        max_tokens=4096,
         messages=[
             {
                 "role": "user",
@@ -98,7 +98,7 @@ Calculate ALL rooms."""
     # Pass 3 — emit clean JSON with dimensions + positions + structure
     pass3 = client.messages.create(
         model=MODEL_SMART,
-        max_tokens=1500,
+        max_tokens=4096,
         messages=[
             {
                 "role": "user",
