@@ -3,7 +3,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
 
-load_dotenv("/Users/chai/Documents/primax_validator/.env", override=True)
+load_dotenv(override=True)
 
 import anthropic
 from agents.geometry_agent import extract_geometry_spec
