@@ -18,6 +18,7 @@ from config import DATA_DIR, CACHE_DIR, RENDERS_OUTPUT_DIR, RENDER_FILES, RENDER
 app = FastAPI(title="PRiMAX Visualiser")
 app.mount("/static",    StaticFiles(directory="static"),          name="static")
 app.mount("/generated", StaticFiles(directory=str(RENDERS_OUTPUT_DIR)), name="generated")
+app.mount("/cache",     StaticFiles(directory=str(CACHE_DIR)),    name="cache")
 
 
 # ── SSE progress queue ────────────────────────────────────────────────────────
@@ -140,7 +141,11 @@ def _run_pipeline():
     try:
         from pipeline import run_render
         result = run_render()
-        _progress_q.put({"type": "done", "glb_url": "/generated/model.glb"})
+        _progress_q.put({
+            "type":       "done",
+            "video_url":  "/generated/happyhorse.mp4",
+            "frame_url":  "/generated/happyhorse_frame.png",
+        })
     except StopIteration:
         _progress_q.put({"type": "stopped"})
     except Exception as e:
@@ -205,16 +210,19 @@ async def get_brand():
 
 @app.get("/api/results")
 async def get_results():
-    img_path = RENDERS_OUTPUT_DIR / "nb_render_enhanced.png"
-    glb_path = RENDERS_OUTPUT_DIR / "model.glb"
-    plan_path = CACHE_DIR / "floor_plan.png"
+    img_path   = RENDERS_OUTPUT_DIR / "nb_render_enhanced.png"
+    video_path = RENDERS_OUTPUT_DIR / "happyhorse.mp4"
+    frame_path = RENDERS_OUTPUT_DIR / "happyhorse_frame.png"
+    plan_path  = CACHE_DIR / "floor_plan.png"
 
-    result = {"image": None, "glb_url": None, "plan": None}
+    result = {"image": None, "video_url": None, "frame_url": None, "plan": None}
 
     if img_path.exists():
         result["image"] = f"data:image/png;base64,{base64.b64encode(img_path.read_bytes()).decode()}"
-    if glb_path.exists():
-        result["glb_url"] = "/generated/model.glb"
+    if video_path.exists():
+        result["video_url"] = "/generated/happyhorse.mp4"
+    if frame_path.exists():
+        result["frame_url"] = "/generated/happyhorse_frame.png"
     if plan_path.exists():
         result["plan"] = f"data:image/png;base64,{base64.b64encode(plan_path.read_bytes()).decode()}"
 

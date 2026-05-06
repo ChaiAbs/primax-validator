@@ -1,138 +1,3 @@
-import * as THREE from 'three';
-import { GLTFLoader }    from 'three/addons/loaders/GLTFLoader.js';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-
-// ── GLB viewer ────────────────────────────────────────────────────────────────
-const canvas     = document.getElementById('glb-canvas');
-const viewerHint = document.getElementById('viewer-hint');
-const glbLoading = document.getElementById('glb-loading');   // the viewer-frame card
-const glbIdle    = document.getElementById('glb-idle');
-const pctEl      = document.getElementById('glb-pct');
-const fillEl     = document.getElementById('glb-fill');
-const stageEl    = document.getElementById('glb-stage');
-const quipEl     = document.getElementById('glb-quip');
-
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(window.devicePixelRatio);
-renderer.shadowMap.enabled   = true;
-renderer.shadowMap.type      = THREE.PCFSoftShadowMap;
-renderer.toneMapping         = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.2;
-renderer.outputColorSpace    = THREE.SRGBColorSpace;
-
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x1a1718);
-
-const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 1000);
-camera.position.set(0, 5, 8);
-
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.dampingFactor = 0.05;
-
-scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.5));
-const sun = new THREE.DirectionalLight(0xfff5e0, 3);
-sun.position.set(5, 10, 5);
-sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
-scene.add(sun);
-const fill = new THREE.DirectionalLight(0xd0e8ff, 0.8);
-fill.position.set(-5, 3, -5);
-scene.add(fill);
-
-function resize() {
-  const w = glbLoading.clientWidth, h = glbLoading.clientHeight;
-  if (!w || !h) return;
-  renderer.setSize(w, h);
-  camera.aspect = w / h;
-  camera.updateProjectionMatrix();
-}
-window.addEventListener('resize', resize);
-
-const loader = new GLTFLoader();
-
-const _quips = [
-  { at: 10,  msg: "Reading your floor plan..." },
-  { at: 20,  msg: "Teaching the AI about your apartment..." },
-  { at: 35,  msg: "Running multiple renders, picking the best one..." },
-  { at: 50,  msg: "Halfway there — hang tight." },
-  { at: 65,  msg: "Validating the output, nearly locked in..." },
-  { at: 75,  msg: "Handing off to Hunyuan 3D — the slow part." },
-  { at: 82,  msg: "Building geometry, this takes a moment..." },
-  { at: 88,  msg: "Almost there, just applying textures..." },
-  { at: 94,  msg: "Wrapping up — shouldn't be long now." },
-];
-let _lastQuipAt = -1;
-
-function setProgress(pct, stage) {
-  pctEl.textContent  = Math.round(pct) + '%';
-  fillEl.style.width = Math.round(pct) + '%';
-  if (stage) stageEl.textContent = stage;
-
-  // Show quip when crossing a threshold
-  const quip = [..._quips].reverse().find(q => pct >= q.at && q.at > _lastQuipAt);
-  if (quip) {
-    _lastQuipAt = quip.at;
-    quipEl.textContent = quip.msg;
-  }
-}
-
-function loadGLB(url) {
-  // Make sure viewer-frame is visible, canvas still hidden until load complete
-  glbIdle.classList.add('hidden');
-  glbLoading.classList.remove('hidden');
-  canvas.classList.add('hidden');
-  viewerHint.classList.add('hidden');
-  setProgress(95, 'Loading 3D model...');
-  resize();
-
-  loader.load(url + '?t=' + Date.now(),
-    gltf => {
-      scene.children.filter(c => c.userData.isModel).forEach(c => scene.remove(c));
-      const model = gltf.scene;
-      model.userData.isModel = true;
-
-      const box    = new THREE.Box3().setFromObject(model);
-      const centre = box.getCenter(new THREE.Vector3());
-      const size   = box.getSize(new THREE.Vector3());
-      const maxDim = Math.max(size.x, size.y, size.z);
-      const scale  = 6 / maxDim;
-
-      model.scale.setScalar(scale);
-      model.position.sub(centre.multiplyScalar(scale));
-      scene.add(model);
-
-      // Hide loading overlay, reveal canvas
-      document.querySelector('.glb-loading').style.display = 'none';
-      canvas.classList.remove('hidden');
-      viewerHint.classList.remove('hidden');
-      setProgress(100, 'Done');
-
-      const dist = maxDim * scale * 1.2;
-      camera.position.set(dist * 0.7, dist * 0.8, dist * 0.7);
-      controls.target.set(0, 0, 0);
-      controls.update();
-      resize();
-    },
-    xhr => {
-      if (xhr.lengthComputable) {
-        const pct = 95 + Math.round((xhr.loaded / xhr.total) * 5);
-        setProgress(pct, 'Loading 3D model...');
-      }
-    },
-    err => {
-      stageEl.textContent = 'Failed to load GLB';
-      console.error(err);
-    }
-  );
-}
-
-(function animate() {
-  requestAnimationFrame(animate);
-  controls.update();
-  renderer.render(scene, camera);
-})();
-
 // ── Upload ────────────────────────────────────────────────────────────────────
 async function handleUploadFile(file) {
   if (!file) return;
@@ -157,7 +22,6 @@ async function handleUploadFile(file) {
     // Switch from welcome to workspace
     document.getElementById('welcome-screen').classList.add('hidden');
     document.getElementById('workspace').classList.remove('hidden');
-    setTimeout(resize, 50);
 
     // Show floor plan
     if (preview) {
@@ -202,14 +66,12 @@ window.swapPanels = function() {
   const panel3d  = document.getElementById('panel-3d');
 
   if (!_swapped) {
-    // Move 2D into right col (top), 3D into left col (top)
     rightCol.prepend(panel2d);
     leftCol.prepend(panel3d);
     panel2d.style.height = '100%';
     panel3d.style.height = '';
     panel3d.style.flex   = '0 0 auto';
   } else {
-    // Restore — 2D back to left col top, 3D back to right col
     leftCol.prepend(panel2d);
     rightCol.prepend(panel3d);
     panel2d.style.height = '';
@@ -217,13 +79,71 @@ window.swapPanels = function() {
     panel3d.style.flex   = '';
   }
   _swapped = !_swapped;
-  resize();
+};
+
+// ── Strip ↔ Main swap ─────────────────────────────────────────────────────────
+let _activeStripId = null;
+
+window.handleStripClick = function(imgId, stripId) {
+  if (_activeStripId === stripId) {
+    swapMainBack();
+  } else {
+    swapToMain(imgId, stripId);
+  }
+};
+
+window.swapToMain = function(imgId, stripId) {
+  const src = document.getElementById(imgId).src;
+  if (!src) return;
+
+  // Restore previous strip if something else was expanded
+  if (_activeStripId && _activeStripId !== stripId) swapMainBack();
+
+  const video       = document.getElementById('output-video');
+  const expandedImg = document.getElementById('main-expanded-img');
+  const videoSrc    = video.src;
+
+  // Expand image into main
+  video.classList.add('hidden');
+  expandedImg.src = src;
+  expandedImg.classList.remove('hidden');
+
+  // Show mini video in the strip slot
+  const stripVideoId = stripId === 'strip-nb' ? 'strip-video-nb' : 'strip-video-snap';
+  const stripVideo   = document.getElementById(stripVideoId);
+  const stripImg     = document.getElementById(imgId);
+  stripVideo.src = videoSrc;
+  stripImg.classList.add('hidden');
+  stripVideo.classList.remove('hidden');
+
+  _activeStripId = stripId;
+};
+
+window.swapMainBack = function() {
+  if (!_activeStripId) return;
+
+  const video       = document.getElementById('output-video');
+  const expandedImg = document.getElementById('main-expanded-img');
+
+  // Restore main video
+  expandedImg.classList.add('hidden');
+  expandedImg.src = '';
+  video.classList.remove('hidden');
+
+  // Restore strip
+  const stripVideoId = _activeStripId === 'strip-nb' ? 'strip-video-nb' : 'strip-video-snap';
+  const imgId        = _activeStripId === 'strip-nb' ? 'nb-render-img' : 'snapshot-img';
+  document.getElementById(stripVideoId).classList.add('hidden');
+  document.getElementById(stripVideoId).src = '';
+  document.getElementById(imgId).classList.remove('hidden');
+
+  _activeStripId = null;
 };
 
 // ── Brand polling ─────────────────────────────────────────────────────────────
 function pollBrand() {
   let attempts = 0;
-  const maxAttempts = 40; // up to ~2 min
+  const maxAttempts = 40;
   const interval = setInterval(async () => {
     attempts++;
     try {
@@ -240,6 +160,49 @@ function pollBrand() {
         '<span style="font-size:11px;color:rgba(241,240,238,0.3);letter-spacing:0.06em">Brand unavailable</span>';
     }
   }, 3000);
+}
+
+// ── Progress helpers ──────────────────────────────────────────────────────────
+const pctEl   = document.getElementById('glb-pct');
+const fillEl  = document.getElementById('glb-fill');
+const stageEl = document.getElementById('glb-stage');
+const quipEl  = document.getElementById('glb-quip');
+
+const _quips = [
+  { at: 10, msg: "Reading your floor plan..." },
+  { at: 20, msg: "Teaching the AI about your apartment..." },
+  { at: 35, msg: "Running multiple renders, picking the best one..." },
+  { at: 50, msg: "Halfway there — hang tight." },
+  { at: 65, msg: "Validating the output, nearly locked in..." },
+  { at: 75, msg: "Handing off to Happy Horse — the cinematic part." },
+  { at: 82, msg: "Building your video, this takes a moment..." },
+  { at: 88, msg: "Almost there, extracting the perfect frame..." },
+  { at: 94, msg: "Wrapping up — shouldn't be long now." },
+];
+let _lastQuipAt = -1;
+
+function setProgress(pct, stage) {
+  pctEl.textContent  = Math.round(pct) + '%';
+  fillEl.style.width = Math.round(pct) + '%';
+  if (stage) stageEl.textContent = stage;
+
+  const quip = [..._quips].reverse().find(q => pct >= q.at && q.at > _lastQuipAt);
+  if (quip) {
+    _lastQuipAt = quip.at;
+    quipEl.textContent = quip.msg;
+  }
+}
+
+// ── Video result ──────────────────────────────────────────────────────────────
+function showVideoResult(videoUrl, frameUrl, nbImageSrc) {
+  document.getElementById('glb-loading').classList.add('hidden');
+  document.getElementById('glb-idle').classList.add('hidden');
+
+  document.getElementById('output-video').src  = videoUrl + '?t=' + Date.now();
+  document.getElementById('snapshot-img').src   = frameUrl + '?t=' + Date.now();
+  if (nbImageSrc) document.getElementById('nb-render-img').src = nbImageSrc;
+
+  document.getElementById('video-result').classList.remove('hidden');
 }
 
 // ── Generate ──────────────────────────────────────────────────────────────────
@@ -263,16 +226,15 @@ window.handleGenerate = async function() {
   bar.classList.remove('hidden');
   log.innerHTML = '';
 
-  // Show loading state in 3D panel
-  glbIdle.classList.add('hidden');
+  // Show loading state
+  document.getElementById('glb-idle').classList.add('hidden');
+  document.getElementById('video-result').classList.add('hidden');
+  const glbLoading = document.getElementById('glb-loading');
   glbLoading.classList.remove('hidden');
-  document.querySelector('.glb-loading').style.display = '';  // ensure visible
-  canvas.classList.add('hidden');
-  viewerHint.classList.add('hidden');
+  glbLoading.querySelector('.glb-loading').style.display = '';
   _lastQuipAt = -1;
   if (quipEl) quipEl.textContent = '';
   setProgress(0, 'Starting pipeline...');
-  resize();
 
   const addLine = (msg, cls = '') => {
     const el = document.createElement('div');
@@ -282,9 +244,8 @@ window.handleGenerate = async function() {
     bar.scrollTop = bar.scrollHeight;
   };
 
-  // Global crawl — runs entire pipeline, ~10 min total = 600s
-  // Crawls 0 → 90% over 600s = 0.15%/s = 0.12% per 800ms tick
-  let currentPct = 0;
+  // Global crawl 0→90% over ~10 min
+  let currentPct   = 0;
   let currentStage = 'Starting pipeline...';
   let globalCrawlTimer = null;
 
@@ -304,22 +265,21 @@ window.handleGenerate = async function() {
 
   function estimateProgress(msg) {
     const m = msg.toLowerCase();
-    // Use keywords only to update the stage label and nudge forward if behind
     if (m.includes('extracting') || m.includes('geometry') || m.includes('finishes') || m.includes('brand spec')) {
       currentStage = 'Analysing floor plan...';
       return currentPct < 5 ? { pct: 5, stage: currentStage } : null;
     }
-    if (m.includes('attempt 1')) {
-      currentStage = 'Generating render (1/3)...';
+    if (m.includes('parallel')) {
+      currentStage = 'Running 3 renders in parallel...';
       return currentPct < 8 ? { pct: 8, stage: currentStage } : null;
     }
-    if (m.includes('attempt 2')) {
-      currentStage = 'Generating render (2/3)...';
-      return currentPct < 28 ? { pct: 28, stage: currentStage } : null;
+    if (m.includes('attempt') && m.includes('done')) {
+      currentStage = 'Renders completing...';
+      return currentPct < 35 ? { pct: 35, stage: currentStage } : null;
     }
-    if (m.includes('attempt 3')) {
-      currentStage = 'Generating render (3/3)...';
-      return currentPct < 48 ? { pct: 48, stage: currentStage } : null;
+    if (m.includes('all renders done')) {
+      currentStage = 'All renders complete';
+      return currentPct < 60 ? { pct: 60, stage: currentStage } : null;
     }
     if (m.includes('validating')) {
       currentStage = 'Validating renders...';
@@ -329,17 +289,13 @@ window.handleGenerate = async function() {
       currentStage = 'Best render selected';
       return currentPct < 72 ? { pct: 72, stage: currentStage } : null;
     }
-    if (m.includes('hunyuan') || m.includes('submitting to hunyuan')) {
-      currentStage = 'Submitting to Hunyuan 3D...';
+    if (m.includes('happy horse') || m.includes('sending best')) {
+      currentStage = 'Generating cinematic video...';
       return currentPct < 75 ? { pct: 75, stage: currentStage } : null;
     }
-    if (m.includes('in_queue') || m.includes('in_progress') || m.includes('building')) {
-      currentStage = 'Building 3D model...';
-      return null;
-    }
-    if (m.includes('pbr') || m.includes('texture')) {
-      currentStage = 'Applying PBR textures...';
-      return null;
+    if (m.includes('video ready') || m.includes('snapshot saved')) {
+      currentStage = 'Extracting snapshot frame...';
+      return currentPct < 92 ? { pct: 92, stage: currentStage } : null;
     }
     return null;
   }
@@ -350,7 +306,7 @@ window.handleGenerate = async function() {
   const es = new EventSource('/api/generate/stream');
   es.onmessage = e => {
     const data = JSON.parse(e.data);
-    if (data.type === 'ping')  return;
+    if (data.type === 'ping') return;
     if (data.type === 'log') {
       addLine(data.msg);
       const est = estimateProgress(data.msg);
@@ -362,15 +318,15 @@ window.handleGenerate = async function() {
     if (data.type === 'done') {
       addLine('✓ Done', 'log-done');
       stopGlobalCrawl();
+      setProgress(100, 'Done');
       es.close();
       btn.disabled    = false;
       btn.textContent = 'Generate';
       stopBtn.classList.add('hidden');
-      loadGLB(data.glb_url);
 
-      // Refresh 2D render to show NanoBanana output
+      // Fetch NanoBanana 2D render for the strip, keep plan-img as original
       fetch('/api/results').then(r => r.json()).then(d => {
-        if (d.image) document.getElementById('plan-img').src = d.image;
+        showVideoResult(data.video_url, data.frame_url, d.image || null);
       });
 
       // Load brand

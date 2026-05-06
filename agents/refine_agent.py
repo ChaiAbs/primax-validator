@@ -115,12 +115,24 @@ def build_render_prompt(geometry_spec: dict, finishes_spec: dict, brand_spec: di
     window_desc  = fin.get("window_frames",    {}).get("description", "aluminium frames")
     mood         = pres.get("mood", "")
 
+    # Build exact room counts dynamically from the spec — works for any floor plan
+    room_counts = {}
+    for r in rooms:
+        name = r['name']
+        room_counts[name] = room_counts.get(name, 0) + 1
+
+    exact_counts = ", ".join(
+        f"{count}x {name}" for name, count in room_counts.items()
+    )
+
     return (
         f"STRICT RULES — DO NOT VIOLATE: "
         f"(1) Do NOT add any new rooms, walls, partitions, or structural elements that are not in the reference image. "
         f"(2) Do NOT remove or resize any existing room. "
         f"(3) Do NOT change the viewing angle — keep the exact overhead top-down perspective. "
-        f"The reference image contains exactly these rooms — no more, no less: {room_list}. "
+        f"CRITICAL: This floor plan contains EXACTLY these rooms and no others: {exact_counts}. "
+        f"Adding, removing, merging, splitting, or duplicating ANY room or space is a DISQUALIFYING ERROR. "
+        f"Every room listed must remain as a separate, distinct, visible space in the output. "
         f"ONLY these three things may change: furniture placed inside rooms, material finishes applied to surfaces, brand colours applied to soft furnishings. "
         f"Apply finishes: {floor_desc} — but terraces and outdoor areas must use light stone or porcelain tile, NOT timber. {wall_desc}. {kitchen_desc}. {window_desc}. "
         f"Brand colours: {primary_colours}. Mood: {mood}. "
@@ -128,24 +140,24 @@ def build_render_prompt(geometry_spec: dict, finishes_spec: dict, brand_spec: di
     )
 
 
-def render_from_floor_plan(geometry_spec: dict, finishes_spec: dict, brand_spec: dict) -> str:
+def render_from_floor_plan(geometry_spec: dict, finishes_spec: dict, brand_spec: dict,
+                           floor_plan_url: str = None) -> str:
     """
-    Upload the cached floor_plan.png to imgbb, submit to NanoBanana image-to-image,
-    poll for result, save and return base64-encoded PNG.
+    Submit to NanoBanana image-to-image, poll for result, save and return base64-encoded PNG.
+    Accepts an optional pre-uploaded floor_plan_url to skip the imgbb upload (for parallel runs).
     """
-    clean_path = CACHE_DIR / "floor_plan_clean.png"
-    floor_plan_path = clean_path if clean_path.exists() else CACHE_DIR / "floor_plan.png"
-    if not floor_plan_path.exists():
-        raise FileNotFoundError("floor_plan.png not found in cache")
-    print(f"  Using {'clean' if clean_path.exists() else 'original'} floor plan", flush=True)
-
     print("  Building render prompt from specs...", flush=True)
     prompt = build_render_prompt(geometry_spec, finishes_spec, brand_spec)
     print(f"  Prompt: {prompt[:120]}...", flush=True)
 
-    print("  Uploading floor plan to imgbb...", flush=True)
-    floor_plan_url = _upload_imgbb(floor_plan_path)
-    print(f"  Floor plan uploaded: {floor_plan_url[:60]}...", flush=True)
+    if floor_plan_url is None:
+        clean_path = CACHE_DIR / "floor_plan_clean.png"
+        floor_plan_path = clean_path if clean_path.exists() else CACHE_DIR / "floor_plan.png"
+        if not floor_plan_path.exists():
+            raise FileNotFoundError("floor_plan.png not found in cache")
+        print("  Uploading floor plan to imgbb...", flush=True)
+        floor_plan_url = _upload_imgbb(floor_plan_path)
+        print(f"  Floor plan uploaded: {floor_plan_url[:60]}...", flush=True)
 
     image_urls = [floor_plan_url]
 

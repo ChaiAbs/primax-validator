@@ -45,7 +45,7 @@
   <div id="welcome-screen" class="welcome-screen">
     <div class="welcome-inner">
       <p class="welcome-eyebrow">PRiMAX · Apartment Visualiser</p>
-      <h1 class="welcome-title">Turn your floor plan<br/>into a 3D model</h1>
+      <h1 class="welcome-title">Turn your floor plan<br/>into a cinematic video</h1>
       <p class="welcome-sub">Upload a zip containing your 2D plan, renders, and brand guide to get started.</p>
       <label class="btn btn-primary welcome-btn" for="zip-input-welcome">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -62,11 +62,11 @@
   <!-- Main workspace (hidden until upload) -->
   <main id="workspace" class="hidden">
 
-    <!-- Left column: plan + renders + brand -->
+    <!-- Left column: original floor plan + renders + brand (unchanged) -->
     <div class="left-col">
 
       <section class="panel" id="panel-2d">
-        <div class="image-frame plan-frame" onclick="swapPanels()">
+        <div class="image-frame plan-frame">
           <img id="plan-img" src="" alt="Floor plan" />
         </div>
       </section>
@@ -83,39 +83,55 @@
 
     </div>
 
-    <!-- Right column: 3D viewer -->
+    <!-- Right column: idle / loading / results -->
     <div class="right-col">
       <section class="panel" id="panel-3d" style="height:100%">
 
-        <!-- Pre-generate: plain text, no box -->
+        <!-- Pre-generate -->
         <div id="glb-idle" class="glb-idle">
-          HIT GENERATE TO SEE THE 3D MODEL
+          HIT GENERATE TO SEE THE VIDEO
         </div>
 
-        <!-- Loading state: full card with progress -->
+        <!-- Loading state -->
         <div id="glb-loading" class="viewer-frame hidden">
-          <canvas id="glb-canvas" class="hidden"></canvas>
           <div class="glb-loading">
             <div class="glb-loading-pct" id="glb-pct">0%</div>
             <div class="glb-loading-bar"><div class="glb-loading-fill" id="glb-fill"></div></div>
             <div class="glb-loading-label" id="glb-stage">Starting pipeline</div>
-          <div class="glb-loading-quip" id="glb-quip"></div>
+            <div class="glb-loading-quip" id="glb-quip"></div>
           </div>
-          <div class="viewer-hint hidden" id="viewer-hint">Drag to rotate · Scroll to zoom · Right-drag to pan</div>
         </div>
+
+        <!-- Results: left strip (NB render + snapshot) | video (2/3) -->
+        <div id="video-result" class="video-result hidden">
+
+          <!-- Left strip: NanoBanana 2D + snapshot -->
+          <div class="result-strip">
+            <p class="panel-title">2D Render</p>
+            <div id="strip-nb" class="strip-frame swap-thumb" onclick="handleStripClick('nb-render-img', 'strip-nb')" title="Click to expand">
+              <img id="nb-render-img" src="" alt="2.5D render" />
+              <video id="strip-video-nb" class="strip-video hidden" autoplay loop muted playsinline></video>
+            </div>
+            <p class="panel-title" style="margin-top:12px">Snapshot <span class="label-sub">3.9 s</span></p>
+            <div id="strip-snap" class="strip-frame swap-thumb" onclick="handleStripClick('snapshot-img', 'strip-snap')" title="Click to expand">
+              <img id="snapshot-img" src="" alt="3D snapshot" />
+              <video id="strip-video-snap" class="strip-video hidden" autoplay loop muted playsinline></video>
+            </div>
+          </div>
+
+          <!-- Video: 2/3 width -->
+          <div class="video-main" id="video-main">
+            <video id="output-video" autoplay loop muted playsinline controls></video>
+            <img id="main-expanded-img" class="hidden" src="" alt="Expanded view" onclick="swapMainBack()" />
+          </div>
+
+        </div>
+
       </section>
     </div>
 
   </main>
 
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
-    }
-  }
-  </script>
-  <script type="module" src="/static/app.js"></script>
+  <script src="/static/app.js"></script>
 </body>
 </html>

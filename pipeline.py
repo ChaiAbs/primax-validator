@@ -153,14 +153,15 @@ def build_scene(use_cache: bool = True) -> dict:
 def run_render(max_attempts: int = 3) -> dict:
     """
     Extract specs (cached), run NanoBanana up to max_attempts times,
-    validate each with Claude Vision, pick the best, then convert to 3D GLB via Hunyuan.
+    validate each with Claude Vision, pick the best, then send to Happy Horse
+    for a cinematic video. Returns the video path + a PNG snapshot frame.
     Respects _stop_flag — exits cleanly between stages if stop is requested.
     """
     import base64 as _b64
     import shutil
     from agents.refine_agent import render_from_floor_plan
-    from agents.hunyuan_agent import generate_3d
     from agents.validator_agent import score_renders
+    from agents.happyhorse_agent import generate_video_frame
     from main import _stop_flag
 
     geometry_spec, finishes_spec, brand_spec = extract_specs()
@@ -169,20 +170,38 @@ def run_render(max_attempts: int = 3) -> dict:
         raise StopIteration("Pipeline stopped by user")
 
     client = anthropic.Anthropic()
-    candidates = []  # list of (path, img_url, b64)
 
-    for attempt in range(1, max_attempts + 1):
-        if _stop_flag.is_set():
-            raise StopIteration("Pipeline stopped by user")
+    # Upload floor plan once, reuse URL across all parallel NanoBanana calls
+    from agents.refine_agent import _upload_imgbb
+    from config import CACHE_DIR
+    clean_path = CACHE_DIR / "floor_plan_clean.png"
+    fp_path    = clean_path if clean_path.exists() else CACHE_DIR / "floor_plan.png"
+    print(f"Uploading floor plan once for {max_attempts} parallel runs...", flush=True)
+    floor_plan_url = _upload_imgbb(fp_path)
+    print(f"  Floor plan hosted: {floor_plan_url[:60]}...", flush=True)
 
-        print(f"NanoBanana attempt {attempt}/{max_attempts}...", flush=True)
+    _parallel_start = time.time()
+
+    def _run_attempt(attempt):
+        t_start = time.time() - _parallel_start
+        print(f"[+{t_start:.1f}s] NanoBanana run {attempt} started", flush=True)
         t0 = time.time()
-        result_b64, nb_image_url = render_from_floor_plan(geometry_spec, finishes_spec, brand_spec)
-        print(f"  Attempt {attempt} done in {time.time() - t0:.1f}s", flush=True)
-
+        result_b64, nb_image_url = render_from_floor_plan(
+            geometry_spec, finishes_spec, brand_spec,
+            floor_plan_url=floor_plan_url
+        )
+        t_end = time.time() - _parallel_start
+        print(f"[+{t_end:.1f}s] NanoBanana run {attempt} done ({time.time() - t0:.1f}s)", flush=True)
         candidate_path = RENDERS_OUTPUT_DIR / f"nb_candidate_{attempt}.png"
         candidate_path.write_bytes(_b64.b64decode(result_b64))
-        candidates.append((candidate_path, nb_image_url, result_b64))
+        return (candidate_path, nb_image_url, result_b64)
+
+    print(f"Firing {max_attempts} NanoBanana runs in parallel...", flush=True)
+    t0 = time.time()
+    with ThreadPoolExecutor(max_workers=max_attempts) as executor:
+        futures = [executor.submit(_run_attempt, i) for i in range(1, max_attempts + 1)]
+        candidates = [f.result() for f in futures]
+    print(f"All {max_attempts} runs done in {time.time() - t0:.1f}s total", flush=True)
 
     if _stop_flag.is_set():
         raise StopIteration("Pipeline stopped by user")
@@ -202,12 +221,15 @@ def run_render(max_attempts: int = 3) -> dict:
     if _stop_flag.is_set():
         raise StopIteration("Pipeline stopped by user")
 
-    glb_path = RENDERS_OUTPUT_DIR / "model.glb"
-    generate_3d(best_url, glb_path)
-    print(f"  3D model saved: {glb_path}", flush=True)
+    # Generate cinematic video via Happy Horse, extract PNG snapshot at 3.5s
+    print(f"Sending best render to Happy Horse for video generation...", flush=True)
+    frame_path = generate_video_frame(best_url, frame_time=3.9)
+    video_path = RENDERS_OUTPUT_DIR / "happyhorse.mp4"
+    print(f"  Video ready, snapshot saved: {frame_path}", flush=True)
 
     return {
-        "image":     f"data:image/png;base64,{best_b64}",
-        "glb_path":  str(glb_path),
-        "specs":     {"geometry": geometry_spec, "finishes": finishes_spec, "brand": brand_spec},
+        "image":      f"data:image/png;base64,{best_b64}",
+        "video_path": str(video_path),
+        "frame_path": str(frame_path),
+        "specs":      {"geometry": geometry_spec, "finishes": finishes_spec, "brand": brand_spec},
     }

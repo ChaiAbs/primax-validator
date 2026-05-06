@@ -31,6 +31,13 @@ def score_renders(client: anthropic.Anthropic, paths: list[Path], geometry_spec:
     """
     rooms = geometry_spec.get("rooms", [])
     room_list = ", ".join(f"{r['name']} {r['width_m']}x{r['depth_m']}m" for r in rooms)
+
+    # Build exact counts for each room name
+    room_counts: dict[str, int] = {}
+    for r in rooms:
+        room_counts[r['name']] = room_counts.get(r['name'], 0) + 1
+    exact_counts = ", ".join(f"{cnt}x {name}" for name, cnt in room_counts.items())
+
     n = len(paths)
 
     content = []
@@ -45,24 +52,35 @@ def score_renders(client: anthropic.Anthropic, paths: list[Path], geometry_spec:
             }
         })
 
-    score_template = [
-        f'{{"run": {i}, "structural": 0, "hallucinations": 0, "total": 0, "notes": ""}}'
-        for i in range(1, n + 1)
-    ]
-
     content.append({"type": "text", "text": f"""You are validating AI-generated floor plan renders.
 
-The correct floor plan contains exactly these rooms: {room_list}
+The CORRECT floor plan contains EXACTLY these rooms — no more, no less:
+{exact_counts}
+(with dimensions: {room_list})
 
-Score each image 0-10 on:
-1. structural — all rooms present, correct count, no rooms removed or resized, outer boundary unchanged
-2. hallucinations — no extra rooms, terraces, walls or structural elements invented (10 = none)
-total = structural + hallucinations
+Score each image on two criteria (each 0-10):
+
+1. structural (0-10)
+   - All rooms from the list above are visible, separate and correctly laid out
+   - No room is missing, merged with another, duplicated, resized, or repositioned
+   - Every listed room must exist as a distinct, separate space
+   - Deduct 2 points per missing, merged, or significantly altered room
+
+2. hallucinations (0-10)
+   - No structural elements exist that are NOT in the list above
+   - This includes any extra room, space, wall, or enclosed area of any kind
+   - Merged rooms count as both a structural error AND a hallucination (the merged space is a new invented shape)
+   - 10 = nothing invented. Deduct 3 points per extra or merged element. Score 0 if a large new area is invented.
+
+total = structural + hallucinations (max 20)
+"best" = run number (1-{n}) with the highest total. Tiebreak: higher hallucinations score wins.
 
 Return JSON only:
 {{
-  "scores": [{", ".join(score_template)}],
-  "best": 1
+  "scores": [
+    {chr(10).join(f'{{"run": {i}, "structural": 0, "hallucinations": 0, "total": 0, "notes": ""}},' for i in range(1, n+1))}
+  ],
+  "best": <winning run number>
 }}"""})
 
     response = client.messages.create(
@@ -72,9 +90,16 @@ Return JSON only:
     )
 
     text = response.content[0].text.strip()
-    # Strip markdown code fences if present
     if text.startswith("```"):
         text = text.split("```")[1]
         if text.startswith("json"):
             text = text[4:]
-    return json.loads(text.strip())
+    result = json.loads(text.strip())
+
+    # Safety: recompute best from scores in case Claude got it wrong
+    scores = result.get("scores", [])
+    if scores:
+        best = max(scores, key=lambda s: (s.get("total", 0), s.get("hallucinations", 0)))
+        result["best"] = best["run"]
+
+    return result

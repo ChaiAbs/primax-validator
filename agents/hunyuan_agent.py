@@ -23,11 +23,11 @@ def generate_3d(image_url: str, output_path: Path) -> Path:
 
     print(f"  Trellis result keys: {list(result.keys())}", flush=True)
 
-    # Trellis returns model_mesh with GLB
-    if result.get("model_mesh"):
-        glb_url = result["model_mesh"]["url"]
-    elif result.get("model_glb"):
+    # Trellis returns model_glb
+    if result.get("model_glb"):
         glb_url = result["model_glb"]["url"]
+    elif result.get("model_mesh"):
+        glb_url = result["model_mesh"]["url"]
     else:
         raise RuntimeError(f"No GLB in Trellis result: {result}")
 
