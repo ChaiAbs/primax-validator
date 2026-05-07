@@ -6,7 +6,7 @@ import threading
 import zipfile
 from pathlib import Path
 
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, Request, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
@@ -245,16 +245,24 @@ async def generate_stop():
 
 
 @app.get("/api/generate/stream")
-async def generate_stream():
+async def generate_stream(request: Request):
     async def events():
         while True:
+            if await request.is_disconnected():
+                break
             try:
                 item = _progress_q.get(timeout=1)
-                yield f"data: {json.dumps(item)}\n\n"
-                if item["type"] in ("done", "error"):
+                try:
+                    yield f"data: {json.dumps(item)}\n\n"
+                except Exception:
+                    break
+                if item["type"] in ("done", "error", "stopped"):
                     break
             except queue.Empty:
-                yield "data: {\"type\":\"ping\"}\n\n"
+                try:
+                    yield "data: {\"type\":\"ping\"}\n\n"
+                except Exception:
+                    break
     return StreamingResponse(events(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
