@@ -16,7 +16,8 @@ body {
   font-family: 'Inter', -apple-system, sans-serif;
   background: var(--bg);
   color: var(--text);
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -140,6 +141,7 @@ header {
 main {
   display: grid;
   grid-template-columns: 340px 1fr;
+  align-items: start;
   gap: 16px;
   padding: 20px 24px;
   flex: 1;
@@ -162,6 +164,7 @@ main {
   flex-direction: column;
   min-height: 0;
   flex: 1;
+  align-self: stretch;
 }
 
 .right-col .panel {
