@@ -9,6 +9,7 @@ import anthropic
 import base64
 import io
 import json
+import re
 
 from PIL import Image
 from pathlib import Path
@@ -90,11 +91,11 @@ Return JSON only:
     )
 
     text = response.content[0].text.strip()
-    if text.startswith("```"):
-        text = text.split("```")[1]
-        if text.startswith("json"):
-            text = text[4:]
-    result = json.loads(text.strip())
+    # Extract JSON object robustly regardless of markdown fencing
+    match = re.search(r'\{.*\}', text, re.DOTALL)
+    if not match:
+        raise RuntimeError(f"Validator returned no JSON. Raw response: {text[:500]}")
+    result = json.loads(match.group())
 
     # Safety: recompute best from scores in case Claude got it wrong
     scores = result.get("scores", [])
