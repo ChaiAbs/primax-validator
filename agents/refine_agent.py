@@ -52,7 +52,7 @@ def _nb_post(payload: dict, endpoint: str = "generate") -> dict:
         return json.loads(resp.read())
 
 
-def _nb_poll(task_id: str, timeout: int = 300) -> dict:
+def _nb_poll(task_id: str, timeout: int = 600) -> dict:
     api_key = os.environ.get("NANOBANANA_API_KEY", "")
     headers = {**_NB_HEADERS, "Authorization": f"Bearer {api_key}"}
     deadline = time.time() + timeout
@@ -69,7 +69,7 @@ def _nb_poll(task_id: str, timeout: int = 300) -> dict:
         if status in (2, 3):
             raise RuntimeError(f"NanoBanana failed (flag={status}): {result}")
         time.sleep(3)
-    raise RuntimeError(f"NanoBanana timed out after {timeout}s")
+    raise RuntimeError(f"NanoBanana timed out after {timeout}s — render may still be processing on their end")
 
 
 def _extract_image_url(data: dict) -> str:
