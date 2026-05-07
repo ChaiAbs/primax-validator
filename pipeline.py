@@ -23,14 +23,15 @@ def _save_cache(name: str, data: dict):
     (CACHE_DIR / f"{name}.json").write_text(json.dumps(data, indent=2))
 
 
-def extract_specs(use_cache: bool = True) -> tuple[dict, dict, dict]:
+def extract_specs(use_cache: bool = True, cache_brand: bool = False) -> tuple[dict, dict, dict]:
     """
     Extract geometry, finishes and brand specs in parallel.
     Results are cached — subsequent calls return instantly.
+    cache_brand=True keeps brand from cache even when use_cache=False.
     """
     geo_cached = _load_cache("geometry") if use_cache else None
     fin_cached = _load_cache("finishes") if use_cache else None
-    brd_cached = _load_cache("brand")    if use_cache else None
+    brd_cached = _load_cache("brand")    if (use_cache or cache_brand) else None
 
     if geo_cached and fin_cached and brd_cached:
         print("Specs loaded from cache")
@@ -74,7 +75,7 @@ def run_render(max_attempts: int = 3) -> dict:
     from agents.happyhorse_agent import generate_video_frame
     from main import _stop_flag
 
-    geometry_spec, finishes_spec, brand_spec = extract_specs(use_cache=False)
+    geometry_spec, finishes_spec, brand_spec = extract_specs(use_cache=False, cache_brand=True)
 
     if _stop_flag.is_set():
         raise StopIteration("Pipeline stopped by user")
