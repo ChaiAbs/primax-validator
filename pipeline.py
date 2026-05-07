@@ -74,7 +74,7 @@ def run_render(max_attempts: int = 3) -> dict:
     from agents.happyhorse_agent import generate_video_frame
     from main import _stop_flag
 
-    geometry_spec, finishes_spec, brand_spec = extract_specs()
+    geometry_spec, finishes_spec, brand_spec = extract_specs(use_cache=False)
 
     if _stop_flag.is_set():
         raise StopIteration("Pipeline stopped by user")
