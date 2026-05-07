@@ -311,6 +311,48 @@ window.handleGenerate = async function() {
   await fetch('/api/generate/start', { method: 'POST' });
   startGlobalCrawl();
 
+  let _finished = false;
+
+  function onDone(data) {
+    if (_finished) return;
+    _finished = true;
+    addLine('✓ Done', 'log-done');
+    stopGlobalCrawl();
+    setProgress(100, 'Done');
+    btn.disabled    = false;
+    btn.textContent = 'Regenerate';
+    restartBtn.classList.remove('hidden');
+    fetch('/api/results').then(r => r.json()).then(d => {
+      showVideoResult(data.video_url, data.frame_url, d.image || null);
+    });
+    fetch('/api/brand').then(r => r.json()).then(renderBrand);
+  }
+
+  // Fallback poller — kicks in if SSE drops, polls until pipeline finishes
+  let _fallbackTimer = null;
+  function startFallbackPoll() {
+    if (_fallbackTimer || _finished) return;
+    _fallbackTimer = setInterval(async () => {
+      if (_finished) { clearInterval(_fallbackTimer); return; }
+      try {
+        const res  = await fetch('/api/generate/status');
+        const data = await res.json();
+        if (data.result && data.result.type === 'done') {
+          clearInterval(_fallbackTimer);
+          onDone(data.result);
+        } else if (!data.running && !data.result) {
+          // pipeline stopped/errored and no result stored
+          clearInterval(_fallbackTimer);
+          stopGlobalCrawl();
+          btn.disabled    = false;
+          btn.textContent = 'Regenerate';
+          restartBtn.classList.remove('hidden');
+          stageEl.textContent = 'Connection lost · click Regenerate to retry';
+        }
+      } catch (_) {}
+    }, 5000);
+  }
+
   const es = new EventSource('/api/generate/stream');
   es.onmessage = e => {
     const data = JSON.parse(e.data);
@@ -324,25 +366,13 @@ window.handleGenerate = async function() {
       }
     }
     if (data.type === 'done') {
-      addLine('✓ Done', 'log-done');
-      stopGlobalCrawl();
-      setProgress(100, 'Done');
       es.close();
-      btn.disabled    = false;
-      btn.textContent = 'Regenerate';
-      restartBtn.classList.remove('hidden');
-
-      // Fetch NanoBanana 2D render for the strip, keep plan-img as original
-      fetch('/api/results').then(r => r.json()).then(d => {
-        showVideoResult(data.video_url, data.frame_url, d.image || null);
-      });
-
-      // Load brand
-      fetch('/api/brand').then(r => r.json()).then(renderBrand);
+      onDone(data);
     }
     if (data.type === 'stopped') {
       stopGlobalCrawl();
       es.close();
+      _finished = true;
       btn.disabled    = false;
       btn.textContent = 'Regenerate';
       restartBtn.classList.remove('hidden');
@@ -354,11 +384,16 @@ window.handleGenerate = async function() {
       addLine('✗ ' + data.msg, 'log-error');
       stopGlobalCrawl();
       es.close();
+      _finished = true;
       btn.disabled    = false;
       btn.textContent = 'Regenerate';
       restartBtn.classList.remove('hidden');
       stageEl.textContent = 'Pipeline error · click Regenerate to retry';
     }
+  };
+  es.onerror = () => {
+    // SSE connection dropped — start fallback poll to catch the result
+    startFallbackPoll();
   };
 };
 

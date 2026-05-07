@@ -75,6 +75,7 @@ app.mount("/cache",     StaticFiles(directory=str(CACHE_DIR)),    name="cache")
 _progress_q: queue.Queue = queue.Queue()
 _pipeline_running = False
 _stop_flag = threading.Event()
+_last_result: dict | None = None  # stored so reconnecting clients can catch up
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -210,11 +211,14 @@ def _run_pipeline():
     try:
         from pipeline import run_render
         result = run_render()
-        _progress_q.put({
+        msg = {
             "type":       "done",
             "video_url":  "/generated/happyhorse.mp4",
             "frame_url":  "/generated/happyhorse_frame.png",
-        })
+        }
+        global _last_result
+        _last_result = msg
+        _progress_q.put(msg)
     except StopIteration:
         _progress_q.put({"type": "stopped"})
     except Exception as e:
@@ -226,16 +230,25 @@ def _run_pipeline():
 
 @app.post("/api/generate/start")
 async def generate_start():
-    global _pipeline_running
+    global _pipeline_running, _last_result
     if _pipeline_running:
         return JSONResponse({"error": "Already running"}, status_code=409)
     _pipeline_running = True
+    _last_result = None
     _stop_flag.clear()
     # drain old messages
     while not _progress_q.empty():
         _progress_q.get_nowait()
     threading.Thread(target=_run_pipeline, daemon=True).start()
     return {"started": True}
+
+
+@app.get("/api/generate/status")
+async def generate_status():
+    return {
+        "running": _pipeline_running,
+        "result":  _last_result,
+    }
 
 
 @app.post("/api/generate/stop")
