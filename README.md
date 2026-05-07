@@ -26,7 +26,7 @@ Upload a zip with your floor plan PDF, reference renders, and brand guide. The p
 ### 6. Best render handed off to Happy Horse for video generation
 ![Loading 76%](docs/06_loading_76.png)
 
-### 7. Result — 2.5D render + 3D isometric video
+### 7. Result — 2.5D render + 3D isometric image + video
 ![Result](docs/07_result.png)
 
 ---
