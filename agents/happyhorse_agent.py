@@ -30,7 +30,7 @@ def generate_video_frame(image_url: str, frame_time: float = 3.9) -> Path:
         "alibaba/happy-horse/image-to-video",
         arguments={
             "image_url":  image_url,
-            "prompt":     "zoom out a little first, then cinematic 3D flythrough of the apartment floor plan only, ignore everything else, end on a 45 degree isometric camera angle",
+            "prompt":     "Zoom out by 0.25, then 3D view of the floor plan, end on isometric viewpoint angle",
             "duration":   4,
             "resolution": "1080p",
         },
