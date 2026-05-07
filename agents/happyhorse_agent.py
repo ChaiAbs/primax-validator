@@ -32,7 +32,7 @@ def generate_video_frame(image_url: str, frame_time: float = 3.9) -> Path:
             "image_url":  image_url,
             "prompt":     "Zoom out by 0.25, then 3D view of the floor plan, end on isometric viewpoint angle",
             "duration":   4,
-            "resolution": "1080p",
+            "resolution": "720p",
         },
         with_logs=True,
     )
