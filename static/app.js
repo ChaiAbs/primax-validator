@@ -619,6 +619,15 @@ window.handleContinue = async function() {
 window.handleDownloadSnapshot = async function() {
   const count = Math.max(1, parseInt(document.getElementById('download-count').value) || 1);
 
+  function triggerDownload(url, filename) {
+    const a = document.createElement('a');
+    a.href     = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
   if (_capturedFrameDataUrl) {
     const res  = await fetch('/api/download/snapshot-data', {
       method:  'POST',
@@ -627,17 +636,15 @@ window.handleDownloadSnapshot = async function() {
     });
     const blob = await res.blob();
     const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href     = url;
-    a.download = count > 1 ? `3d_renders_${count}x.zip` : '3d_render.png';
-    a.click();
-    URL.revokeObjectURL(url);
+    triggerDownload(url, count > 1 ? `3d_renders_${count}x.zip` : '3d_render.png');
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
     return;
   }
 
-  const a = document.createElement('a');
-  a.href = `/api/download/snapshot?count=${count}`;
-  a.click();
+  triggerDownload(
+    `/api/download/snapshot?count=${count}`,
+    count > 1 ? `3d_renders_${count}x.zip` : '3d_render.png'
+  );
 };
 
 function renderBrand(brand) {
