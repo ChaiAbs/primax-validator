@@ -23,6 +23,8 @@
             </svg>
             Generate
           </button>
+          <button class="btn btn-primary hidden" id="btn-continue" onclick="handleContinue()">Continue</button>
+          <button class="btn btn-primary hidden" id="btn-regen-video" onclick="handleRegenVideo()">Regenerate Video</button>
           <button class="btn hidden" id="btn-restart" onclick="window.location.reload()">Restart</button>
           <span class="upload-status" id="upload-status"></span>
         </div>
@@ -95,26 +97,46 @@
 
           <!-- Left strip: NanoBanana 2.5D + 3D render -->
           <div class="result-strip">
+
+            <!-- Mini progress shown after NB done, before Continue -->
+            <div id="strip-mini-progress" class="strip-mini-progress hidden">
+              <div class="strip-mini-pct">50%</div>
+              <div class="strip-mini-bar"><div class="strip-mini-fill"></div></div>
+              <div class="strip-mini-label">2.5D ready</div>
+            </div>
+
             <p class="panel-title" id="title-strip-nb">2.5D Render</p>
             <div id="strip-nb" class="strip-frame swap-thumb" onclick="handleStripClick('nb-render-img', 'strip-nb')" title="Click to expand">
               <img id="nb-render-img" src="" alt="2.5D render" />
               <video id="strip-video-nb" class="strip-video hidden" autoplay muted playsinline></video>
             </div>
-            <p class="panel-title" id="title-strip-snap" style="margin-top:12px">3D Render</p>
-            <div id="strip-snap" class="strip-frame swap-thumb" onclick="handleStripClick('snapshot-img', 'strip-snap')" title="Click to expand">
-              <img id="snapshot-img" src="" alt="3D render" />
-              <video id="strip-video-snap" class="strip-video hidden" autoplay muted playsinline></video>
+
+            <!-- Hidden until video is ready -->
+            <div id="strip-hh-section" class="hidden">
+              <p class="panel-title" id="title-strip-snap" style="margin-top:12px">3D Render</p>
+              <div id="strip-snap" class="strip-frame swap-thumb" onclick="handleStripClick('snapshot-img', 'strip-snap')" title="Click to expand">
+                <img id="snapshot-img" src="" alt="3D render" />
+                <video id="strip-video-snap" class="strip-video hidden" autoplay muted playsinline></video>
+              </div>
+              <button class="btn btn-snapshot" onclick="handleCapture3D()">3D Snapshot</button>
+              <div class="download-row">
+                <input type="text" inputmode="numeric" pattern="[0-9]*" id="download-count" value="1" onkeypress="return /[0-9]/.test(event.key)" onpaste="return false" />
+                <button class="btn" onclick="handleDownloadSnapshot()">Download</button>
+              </div>
             </div>
-            <div class="download-row">
-              <input type="text" inputmode="numeric" pattern="[0-9]*" id="download-count" value="1" onkeypress="return /[0-9]/.test(event.key)" onpaste="return false" />
-              <button class="btn" onclick="handleDownloadSnapshot()">Download</button>
-            </div>
+
           </div>
 
           <!-- Video: 2/3 width -->
           <div class="video-main-wrapper">
             <p class="panel-title" id="title-main">3D Video</p>
             <div class="video-main" id="video-main">
+              <img id="nb-main-img" class="hidden" src="" alt="2.5D Render" />
+              <div id="video-main-loading" class="video-main-loading hidden">
+                <div class="glb-loading-pct" id="vml-pct">0%</div>
+                <div class="glb-loading-bar"><div class="glb-loading-fill" id="vml-fill"></div></div>
+                <div class="glb-loading-quip" id="vml-quip"></div>
+              </div>
               <video id="output-video" autoplay muted playsinline controls></video>
               <img id="main-expanded-img" class="hidden" src="" alt="Expanded view" onclick="swapMainBack()" />
             </div>

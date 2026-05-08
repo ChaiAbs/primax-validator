@@ -38,16 +38,25 @@ def extract_specs(use_cache: bool = True, cache_brand: bool = False) -> tuple[di
         return geo_cached, fin_cached, brd_cached
 
     client = anthropic.Anthropic()
+
+    def _run_with_retry(fn, name):
+        for attempt in range(1, 3):
+            try:
+                return fn(client)
+            except Exception as e:
+                print(f"  {name} extraction attempt {attempt} failed: {e} — retrying...", flush=True)
+        raise RuntimeError(f"{name} extraction failed after 2 attempts")
+
     print("Extracting specs in parallel (geometry · finishes · brand)...")
     t0 = time.time()
     tasks = {}
     with ThreadPoolExecutor(max_workers=3) as executor:
         if not geo_cached:
-            tasks["geometry"] = executor.submit(extract_geometry_spec, client)
+            tasks["geometry"] = executor.submit(_run_with_retry, extract_geometry_spec, "geometry")
         if not fin_cached:
-            tasks["finishes"] = executor.submit(extract_project_spec,  client)
+            tasks["finishes"] = executor.submit(_run_with_retry, extract_project_spec,  "finishes")
         if not brd_cached:
-            tasks["brand"]    = executor.submit(extract_brand_spec,    client)
+            tasks["brand"]    = executor.submit(_run_with_retry, extract_brand_spec,    "brand")
 
         geometry_spec = tasks["geometry"].result() if "geometry" in tasks else geo_cached
         finishes_spec = tasks["finishes"].result() if "finishes" in tasks else fin_cached
@@ -61,19 +70,17 @@ def extract_specs(use_cache: bool = True, cache_brand: bool = False) -> tuple[di
 
 
 
-def run_render(max_attempts: int = 3) -> dict:
+def run_nb_stage(max_attempts: int = 3) -> dict:
     """
-    Extract specs (cached), run NanoBanana up to max_attempts times,
-    validate each with Claude Vision, pick the best, then send to Happy Horse
-    for a cinematic video. Returns the video path + a PNG snapshot frame.
-    Respects _stop_flag — exits cleanly between stages if stop is requested.
+    Stage 1: Extract specs + run NanoBanana x3 in parallel + validate.
+    Saves best render to nb_render_enhanced.png and returns it as base64.
     """
     import base64 as _b64
     import shutil
-    from agents.refine_agent import render_from_floor_plan
+    from agents.refine_agent import render_from_floor_plan, _upload_imgbb
     from agents.validator_agent import score_renders
-    from agents.happyhorse_agent import generate_video_frame
     from main import _stop_flag
+    from config import CACHE_DIR
 
     geometry_spec, finishes_spec, brand_spec = extract_specs(use_cache=False, cache_brand=True)
 
@@ -82,9 +89,6 @@ def run_render(max_attempts: int = 3) -> dict:
 
     client = anthropic.Anthropic()
 
-    # Upload floor plan once, reuse URL across all parallel NanoBanana calls
-    from agents.refine_agent import _upload_imgbb
-    from config import CACHE_DIR
     clean_path = CACHE_DIR / "floor_plan_clean.png"
     fp_path    = clean_path if clean_path.exists() else CACHE_DIR / "floor_plan.png"
     print(f"Uploading floor plan once for {max_attempts} parallel runs...", flush=True)
@@ -117,26 +121,38 @@ def run_render(max_attempts: int = 3) -> dict:
     if _stop_flag.is_set():
         raise StopIteration("Pipeline stopped by user")
 
-    # Validate and pick best
     print(f"Validating {len(candidates)} candidates...", flush=True)
     paths = [c[0] for c in candidates]
     result = score_renders(client, paths, geometry_spec)
     print(f"  Scores: {result}", flush=True)
 
-    best_idx = result["best"] - 1  # convert to 0-indexed
-    best_path, best_url, best_b64 = candidates[best_idx]
+    best_idx   = result["best"] - 1
+    best_path, _, best_b64 = candidates[best_idx]
     print(f"  Best candidate: run {best_idx + 1} (score {result['scores'][best_idx]['total']})", flush=True)
 
     shutil.copy(best_path, RENDERS_OUTPUT_DIR / "nb_render_enhanced.png")
 
-    if _stop_flag.is_set():
-        raise StopIteration("Pipeline stopped by user")
+    return {
+        "image": f"data:image/png;base64,{best_b64}",
+        "specs": {"geometry": geometry_spec, "finishes": finishes_spec, "brand": brand_spec},
+    }
 
-    # Convert best render to JPEG and re-upload to imgbb for a fresh stable URL
-    print(f"Re-uploading best render for Happy Horse...", flush=True)
+
+def run_hh_stage() -> dict:
+    """
+    Stage 2: Send existing nb_render_enhanced.png to Happy Horse → video + snapshot.
+    """
     import io as _io
+    from agents.refine_agent import _upload_imgbb
+    from agents.happyhorse_agent import generate_video_frame
     from PIL import Image as _Image
-    _img = _Image.open(RENDERS_OUTPUT_DIR / "nb_render_enhanced.png").convert("RGB")
+
+    nb_path = RENDERS_OUTPUT_DIR / "nb_render_enhanced.png"
+    if not nb_path.exists():
+        raise RuntimeError("No NanoBanana render found — run Stage 1 first")
+
+    print("Re-uploading best render for Happy Horse...", flush=True)
+    _img = _Image.open(nb_path).convert("RGB")
     _jpg_buf = _io.BytesIO()
     _img.save(_jpg_buf, format="JPEG", quality=95)
     _jpg_path = RENDERS_OUTPUT_DIR / "nb_render_enhanced.jpg"
@@ -144,15 +160,12 @@ def run_render(max_attempts: int = 3) -> dict:
     fresh_url = _upload_imgbb(_jpg_path)
     print(f"  Fresh URL: {fresh_url[:60]}...", flush=True)
 
-    # Generate cinematic video via Happy Horse, extract PNG snapshot at 3.9s
-    print(f"Sending best render to Happy Horse for video generation...", flush=True)
+    print("Sending to Happy Horse...", flush=True)
     frame_path = generate_video_frame(fresh_url, frame_time=3.9)
     video_path = RENDERS_OUTPUT_DIR / "happyhorse.mp4"
     print(f"  Video ready, snapshot saved: {frame_path}", flush=True)
 
     return {
-        "image":      f"data:image/png;base64,{best_b64}",
         "video_path": str(video_path),
         "frame_path": str(frame_path),
-        "specs":      {"geometry": geometry_spec, "finishes": finishes_spec, "brand": brand_spec},
     }

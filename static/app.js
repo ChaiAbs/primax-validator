@@ -184,28 +184,38 @@ const fillEl  = document.getElementById('glb-fill');
 const stageEl = document.getElementById('glb-stage');
 const quipEl  = document.getElementById('glb-quip');
 
+// 0–50% = NB stage · 50–100% = HH stage
 const _quips = [
-  { at: 10, msg: "Reading your floor plan..." },
-  { at: 20, msg: "Teaching the AI about your apartment..." },
-  { at: 35, msg: "Running multiple renders, picking the best one..." },
-  { at: 50, msg: "Halfway there — hang tight." },
-  { at: 65, msg: "Validating the output, nearly locked in..." },
-  { at: 75, msg: "Handing off to Happy Horse — the cinematic part." },
-  { at: 82, msg: "Building your video, this takes a moment..." },
+  { at:  5, msg: "Reading your floor plan..." },
+  { at: 15, msg: "Teaching the AI about your apartment..." },
+  { at: 30, msg: "Running 3 renders in parallel..." },
+  { at: 45, msg: "Picking the best result..." },
+  { at: 50, msg: "Halfway there — 2.5D render complete." },
+  { at: 62, msg: "Sending to Happy Horse..." },
+  { at: 75, msg: "Building your video, this takes a moment..." },
   { at: 88, msg: "Almost there, extracting the perfect frame..." },
   { at: 94, msg: "Wrapping up — shouldn't be long now." },
 ];
 let _lastQuipAt = -1;
 
 function setProgress(pct, stage) {
-  pctEl.textContent  = Math.round(pct) + '%';
-  fillEl.style.width = Math.round(pct) + '%';
+  const rounded = Math.round(pct);
+  pctEl.textContent  = rounded + '%';
+  fillEl.style.width = rounded + '%';
   if (stage) stageEl.textContent = stage;
+
+  // Sync in-main loading (HH stage)
+  const vmlPct  = document.getElementById('vml-pct');
+  const vmlFill = document.getElementById('vml-fill');
+  if (vmlPct)  vmlPct.textContent  = rounded + '%';
+  if (vmlFill) vmlFill.style.width = rounded + '%';
 
   const quip = [..._quips].reverse().find(q => pct >= q.at && q.at > _lastQuipAt);
   if (quip) {
     _lastQuipAt = quip.at;
-    quipEl.textContent = quip.msg;
+    if (quipEl) quipEl.textContent = quip.msg;
+    const vmlQuip = document.getElementById('vml-quip');
+    if (vmlQuip) vmlQuip.textContent = quip.msg;
   }
 }
 
@@ -214,9 +224,19 @@ function showVideoResult(videoUrl, frameUrl, nbImageSrc) {
   document.getElementById('glb-loading').classList.add('hidden');
   document.getElementById('glb-idle').classList.add('hidden');
 
-  document.getElementById('output-video').src  = videoUrl + '?t=' + Date.now();
-  document.getElementById('snapshot-img').src   = frameUrl + '?t=' + Date.now();
+  // Restore full result layout
+  document.getElementById('nb-main-img').classList.add('hidden');
+  document.getElementById('video-main-loading').classList.add('hidden');
+  document.getElementById('output-video').classList.remove('hidden');
+  document.getElementById('output-video').src = videoUrl + '?t=' + Date.now();
+  document.getElementById('snapshot-img').src  = frameUrl + '?t=' + Date.now();
   if (nbImageSrc) document.getElementById('nb-render-img').src = nbImageSrc;
+
+  document.getElementById('strip-mini-progress').classList.add('hidden');
+  document.getElementById('title-strip-nb').classList.remove('hidden');
+  document.getElementById('strip-nb').classList.remove('hidden');
+  document.getElementById('strip-hh-section').classList.remove('hidden');
+  document.getElementById('title-main').textContent = '3D Video';
 
   document.getElementById('video-result').classList.remove('hidden');
 }
@@ -252,16 +272,16 @@ window.handleGenerate = async function() {
     bar.scrollTop = bar.scrollHeight;
   };
 
-  // Global crawl 0→90% over ~10 min
+  // NB stage: crawl 0→45% · snaps to 50 on nb_done
   let currentPct   = 0;
   let currentStage = 'Starting pipeline...';
   let globalCrawlTimer = null;
 
-  function startGlobalCrawl() {
+  function startGlobalCrawl(maxPct, speed = 0.12) {
     if (globalCrawlTimer) return;
     globalCrawlTimer = setInterval(() => {
-      if (currentPct < 90) {
-        currentPct = Math.min(90, currentPct + 0.12);
+      if (currentPct < maxPct) {
+        currentPct = Math.min(maxPct, currentPct + speed);
         setProgress(currentPct, currentStage);
       }
     }, 800);
@@ -279,53 +299,63 @@ window.handleGenerate = async function() {
     }
     if (m.includes('parallel')) {
       currentStage = 'Running 3 renders in parallel...';
-      return currentPct < 8 ? { pct: 8, stage: currentStage } : null;
+      return currentPct < 10 ? { pct: 10, stage: currentStage } : null;
     }
     if (m.includes('attempt') && m.includes('done')) {
       currentStage = 'Renders completing...';
-      return currentPct < 35 ? { pct: 35, stage: currentStage } : null;
+      return currentPct < 25 ? { pct: 25, stage: currentStage } : null;
     }
-    if (m.includes('all renders done')) {
+    if (m.includes('all') && m.includes('done')) {
       currentStage = 'All renders complete';
-      return currentPct < 60 ? { pct: 60, stage: currentStage } : null;
+      return currentPct < 38 ? { pct: 38, stage: currentStage } : null;
     }
     if (m.includes('validating')) {
       currentStage = 'Validating renders...';
-      return currentPct < 68 ? { pct: 68, stage: currentStage } : null;
+      return currentPct < 42 ? { pct: 42, stage: currentStage } : null;
     }
     if (m.includes('best candidate')) {
       currentStage = 'Best render selected';
-      return currentPct < 72 ? { pct: 72, stage: currentStage } : null;
-    }
-    if (m.includes('happy horse') || m.includes('sending best')) {
-      currentStage = 'Generating cinematic video...';
-      return currentPct < 75 ? { pct: 75, stage: currentStage } : null;
-    }
-    if (m.includes('video ready') || m.includes('snapshot saved')) {
-      currentStage = 'Extracting snapshot frame...';
-      return currentPct < 92 ? { pct: 92, stage: currentStage } : null;
+      return currentPct < 48 ? { pct: 48, stage: currentStage } : null;
     }
     return null;
   }
 
   await fetch('/api/generate/start', { method: 'POST' });
-  startGlobalCrawl();
+  startGlobalCrawl(45);
 
   let _finished = false;
 
-  function onDone(data) {
+  function onNbDone() {
     if (_finished) return;
     _finished = true;
-    addLine('✓ Done', 'log-done');
+    addLine('✓ 2.5D render ready', 'log-done');
     stopGlobalCrawl();
-    setProgress(100, 'Done');
+    currentPct = 50;
+    setProgress(50, '2.5D render complete');
     btn.disabled    = false;
     btn.textContent = 'Regenerate';
+    document.getElementById('btn-continue').classList.remove('hidden');
+    document.getElementById('btn-regen-video').classList.add('hidden');
     restartBtn.classList.remove('hidden');
     fetch('/api/results').then(r => r.json()).then(d => {
-      showVideoResult(data.video_url, data.frame_url, d.image || null);
+      // Show 2.5D big in main tile
+      if (d.image) {
+        document.getElementById('nb-main-img').src = d.image;
+        document.getElementById('nb-main-img').classList.remove('hidden');
+      }
+      document.getElementById('output-video').classList.add('hidden');
+      document.getElementById('main-expanded-img').classList.add('hidden');
+      document.getElementById('title-main').textContent = '2.5D Render';
+      // Mini progress (50%) in strip, hide NB thumbnail (it's big now)
+      document.getElementById('strip-mini-progress').classList.remove('hidden');
+      document.getElementById('title-strip-nb').classList.add('hidden');
+      document.getElementById('strip-nb').classList.add('hidden');
+      // Hide 3D render / snapshot / download until video is ready
+      document.getElementById('strip-hh-section').classList.add('hidden');
+      document.getElementById('glb-loading').classList.add('hidden');
+      document.getElementById('glb-idle').classList.add('hidden');
+      document.getElementById('video-result').classList.remove('hidden');
     });
-    fetch('/api/brand').then(r => r.json()).then(renderBrand);
   }
 
   // Fallback poller — kicks in if SSE drops, polls until pipeline finishes
@@ -337,11 +367,10 @@ window.handleGenerate = async function() {
       try {
         const res  = await fetch('/api/generate/status');
         const data = await res.json();
-        if (data.result && data.result.type === 'done') {
+        if (data.result && data.result.type === 'nb_done') {
           clearInterval(_fallbackTimer);
-          onDone(data.result);
+          onNbDone();
         } else if (!data.running && !data.result) {
-          // pipeline stopped/errored and no result stored
           clearInterval(_fallbackTimer);
           stopGlobalCrawl();
           btn.disabled    = false;
@@ -365,9 +394,9 @@ window.handleGenerate = async function() {
         setProgress(currentPct, est.stage);
       }
     }
-    if (data.type === 'done') {
+    if (data.type === 'nb_done') {
       es.close();
-      onDone(data);
+      onNbDone();
     }
     if (data.type === 'stopped') {
       stopGlobalCrawl();
@@ -392,14 +421,220 @@ window.handleGenerate = async function() {
     }
   };
   es.onerror = () => {
-    // SSE connection dropped — start fallback poll to catch the result
     startFallbackPoll();
   };
 };
 
+// ── 3D Snapshot ───────────────────────────────────────────────────────────────
+let _capturedFrameDataUrl = null;
+
+window.handleCapture3D = function() {
+  const video = document.getElementById('output-video');
+  if (!video.src) return;
+
+  const canvas = document.createElement('canvas');
+  canvas.width  = video.videoWidth  || 1280;
+  canvas.height = video.videoHeight || 720;
+  canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  _capturedFrameDataUrl = canvas.toDataURL('image/png');
+
+  // Update the 3D render thumbnail
+  const snapImg = document.getElementById('snapshot-img');
+  snapImg.src = _capturedFrameDataUrl;
+};
+
+// ── Regenerate Video ──────────────────────────────────────────────────────────
+window.handleRegenVideo = async function() {
+  const btn = document.getElementById('btn-regen-video');
+  btn.disabled    = true;
+  btn.textContent = 'Regenerating...';
+
+  const bar = document.getElementById('progress-bar');
+  const log = document.getElementById('progress-log');
+  bar.classList.remove('hidden');
+  log.innerHTML = '';
+
+  // Show in-main loading, hide video
+  document.getElementById('output-video').classList.add('hidden');
+  document.getElementById('video-main-loading').classList.remove('hidden');
+  _lastQuipAt = 50;
+  let regenPct = 50;
+  setProgress(50, 'Sending to Happy Horse...');
+
+  await fetch('/api/generate/video', { method: 'POST' });
+
+  let crawlTimer = setInterval(() => {
+    if (regenPct < 95) { regenPct = Math.min(95, regenPct + 0.10); setProgress(regenPct, stageEl.textContent); }
+  }, 800);
+
+  const es = new EventSource('/api/generate/stream');
+  es.onmessage = e => {
+    const data = JSON.parse(e.data);
+    if (data.type === 'ping') return;
+    if (data.type === 'log') {
+      const el = document.createElement('div');
+      el.textContent = data.msg;
+      log.appendChild(el);
+      bar.scrollTop = bar.scrollHeight;
+      const m = data.msg.toLowerCase();
+      if ((m.includes('video ready') || m.includes('downloading')) && regenPct < 75) {
+        regenPct = 75; setProgress(regenPct, 'Downloading video...');
+      }
+      if (m.includes('extracting frame') && regenPct < 90) {
+        regenPct = 90; setProgress(regenPct, 'Extracting snapshot frame...');
+      }
+    }
+    if (data.type === 'done') {
+      clearInterval(crawlTimer);
+      es.close();
+      setProgress(100, 'Done');
+      btn.disabled    = false;
+      btn.textContent = 'Regenerate Video';
+      document.getElementById('video-main-loading').classList.add('hidden');
+      document.getElementById('output-video').classList.remove('hidden');
+      document.getElementById('output-video').src = data.video_url + '?t=' + Date.now();
+      document.getElementById('snapshot-img').src = data.frame_url + '?t=' + Date.now();
+      _capturedFrameDataUrl = null;
+    }
+    if (data.type === 'error') {
+      clearInterval(crawlTimer);
+      es.close();
+      btn.disabled    = false;
+      btn.textContent = 'Regenerate Video';
+      document.getElementById('video-main-loading').classList.add('hidden');
+      document.getElementById('output-video').classList.remove('hidden');
+      const el = document.createElement('div');
+      el.className   = 'log-error';
+      el.textContent = '✗ ' + data.msg;
+      log.appendChild(el);
+    }
+  };
+};
+
+// ── Continue (Stage 2: Happy Horse) ──────────────────────────────────────────
+window.handleContinue = async function() {
+  const continueBtn = document.getElementById('btn-continue');
+  const regenBtn    = document.getElementById('btn-generate');
+  const restartBtn  = document.getElementById('btn-restart');
+  continueBtn.disabled    = true;
+  continueBtn.textContent = 'Generating...';
+  regenBtn.disabled       = true;
+
+  const bar = document.getElementById('progress-bar');
+  const log = document.getElementById('progress-log');
+  bar.classList.remove('hidden');
+  log.innerHTML = '';
+
+  const addLine = (msg, cls = '') => {
+    const el = document.createElement('div');
+    if (cls) el.className = cls;
+    el.textContent = msg;
+    log.appendChild(el);
+    bar.scrollTop = bar.scrollHeight;
+  };
+
+  // Move 2.5D from main tile into strip thumbnail — keep video-result open
+  const nbMainImg = document.getElementById('nb-main-img');
+  if (nbMainImg.src) document.getElementById('nb-render-img').src = nbMainImg.src;
+  nbMainImg.classList.add('hidden');
+  document.getElementById('strip-mini-progress').classList.add('hidden');
+  document.getElementById('title-strip-nb').classList.remove('hidden');
+  document.getElementById('strip-nb').classList.remove('hidden');
+  document.getElementById('strip-hh-section').classList.add('hidden');
+  document.getElementById('output-video').classList.add('hidden');
+  document.getElementById('title-main').textContent = '3D Video';
+
+  // Show in-main loading overlay (video-result stays open so strip remains visible)
+  document.getElementById('video-main-loading').classList.remove('hidden');
+
+  // Pick up progress from 50%
+  let hhPct = 50;
+  _lastQuipAt = 50;
+  if (quipEl) quipEl.textContent = '';
+  setProgress(50, 'Sending to Happy Horse...');
+
+  await fetch('/api/generate/continue', { method: 'POST' });
+
+  // Crawl 50→95%
+  let crawlTimer = setInterval(() => {
+    if (hhPct < 95) {
+      hhPct = Math.min(95, hhPct + 0.10);
+      setProgress(hhPct, stageEl.textContent);
+    }
+  }, 800);
+
+  const es = new EventSource('/api/generate/stream');
+  es.onmessage = e => {
+    const data = JSON.parse(e.data);
+    if (data.type === 'ping') return;
+    if (data.type === 'log') {
+      addLine(data.msg);
+      const m = data.msg.toLowerCase();
+      if ((m.includes('happy horse') || m.includes('submitting')) && hhPct < 58) {
+        hhPct = 58; setProgress(hhPct, 'Generating cinematic video...');
+      }
+      if ((m.includes('video ready') || m.includes('downloading')) && hhPct < 75) {
+        hhPct = 75; setProgress(hhPct, 'Downloading video...');
+      }
+      if (m.includes('extracting frame') && hhPct < 90) {
+        hhPct = 90; setProgress(hhPct, 'Extracting snapshot frame...');
+      }
+    }
+    if (data.type === 'done') {
+      clearInterval(crawlTimer);
+      es.close();
+      setProgress(100, 'Done');
+      addLine('✓ Done', 'log-done');
+      continueBtn.disabled = false;
+      continueBtn.classList.add('hidden');
+      regenBtn.disabled    = false;
+      restartBtn.classList.remove('hidden');
+      document.getElementById('btn-regen-video').classList.remove('hidden');
+      fetch('/api/results').then(r => r.json()).then(d => {
+        showVideoResult(data.video_url, data.frame_url, d.image || null);
+      });
+    }
+    if (data.type === 'error') {
+      clearInterval(crawlTimer);
+      es.close();
+      continueBtn.disabled    = false;
+      continueBtn.textContent = 'Continue';
+      regenBtn.disabled       = false;
+      addLine('✗ ' + data.msg, 'log-error');
+      stageEl.textContent = 'Error · click Continue to retry';
+      // Restore 2.5D-in-main state so user can retry Continue
+      document.getElementById('video-main-loading').classList.add('hidden');
+      document.getElementById('nb-main-img').classList.remove('hidden');
+      document.getElementById('strip-mini-progress').classList.remove('hidden');
+      document.getElementById('title-strip-nb').classList.add('hidden');
+      document.getElementById('strip-nb').classList.add('hidden');
+      document.getElementById('title-main').textContent = '2.5D Render';
+    }
+  };
+  es.onerror = () => { clearInterval(crawlTimer); };
+};
+
 // ── Download snapshot ─────────────────────────────────────────────────────────
-window.handleDownloadSnapshot = function() {
+window.handleDownloadSnapshot = async function() {
   const count = Math.max(1, parseInt(document.getElementById('download-count').value) || 1);
+
+  if (_capturedFrameDataUrl) {
+    const res  = await fetch('/api/download/snapshot-data', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ data: _capturedFrameDataUrl, count }),
+    });
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = count > 1 ? `3d_renders_${count}x.zip` : '3d_render.png';
+    a.click();
+    URL.revokeObjectURL(url);
+    return;
+  }
+
   const a = document.createElement('a');
   a.href = `/api/download/snapshot?count=${count}`;
   a.click();

@@ -197,30 +197,51 @@ async def upload(file: UploadFile = File(...)):
 
 
 # ── Generate (SSE stream) ─────────────────────────────────────────────────────
-def _run_pipeline():
-    global _pipeline_running
-    import builtins
-    _orig_print = builtins.print
-
+def _make_print_interceptor(orig):
     def _p(*args, **kwargs):
         msg = " ".join(str(a) for a in args)
         _progress_q.put({"type": "log", "msg": msg})
-        _orig_print(*args, **kwargs)
+        orig(*args, **kwargs)
+    return _p
 
-    builtins.print = _p
+
+def _run_nb_stage():
+    global _pipeline_running
+    import builtins
+    _orig_print = builtins.print
+    builtins.print = _make_print_interceptor(_orig_print)
     try:
-        from pipeline import run_render
-        result = run_render()
-        msg = {
-            "type":       "done",
-            "video_url":  "/generated/happyhorse.mp4",
-            "frame_url":  "/generated/happyhorse_frame.png",
-        }
+        from pipeline import run_nb_stage
+        run_nb_stage()
+        msg = {"type": "nb_done"}
         global _last_result
         _last_result = msg
         _progress_q.put(msg)
     except StopIteration:
         _progress_q.put({"type": "stopped"})
+    except Exception as e:
+        _progress_q.put({"type": "error", "msg": str(e)})
+    finally:
+        builtins.print = _orig_print
+        _pipeline_running = False
+
+
+def _run_hh_stage():
+    global _pipeline_running
+    import builtins
+    _orig_print = builtins.print
+    builtins.print = _make_print_interceptor(_orig_print)
+    try:
+        from pipeline import run_hh_stage
+        run_hh_stage()
+        msg = {
+            "type":      "done",
+            "video_url": "/generated/happyhorse.mp4",
+            "frame_url": "/generated/happyhorse_frame.png",
+        }
+        global _last_result
+        _last_result = msg
+        _progress_q.put(msg)
     except Exception as e:
         _progress_q.put({"type": "error", "msg": str(e)})
     finally:
@@ -236,10 +257,41 @@ async def generate_start():
     _pipeline_running = True
     _last_result = None
     _stop_flag.clear()
-    # drain old messages
     while not _progress_q.empty():
         _progress_q.get_nowait()
-    threading.Thread(target=_run_pipeline, daemon=True).start()
+    threading.Thread(target=_run_nb_stage, daemon=True).start()
+    return {"started": True}
+
+
+@app.post("/api/generate/continue")
+async def generate_continue():
+    global _pipeline_running, _last_result
+    if _pipeline_running:
+        return JSONResponse({"error": "Already running"}, status_code=409)
+    _pipeline_running = True
+    _last_result = None
+    _stop_flag.clear()
+    while not _progress_q.empty():
+        _progress_q.get_nowait()
+    threading.Thread(target=_run_hh_stage, daemon=True).start()
+    return {"started": True}
+
+
+def _run_video_only():
+    _run_hh_stage()
+
+
+@app.post("/api/generate/video")
+async def generate_video():
+    global _pipeline_running, _last_result
+    if _pipeline_running:
+        return JSONResponse({"error": "Already running"}, status_code=409)
+    _pipeline_running = True
+    _last_result = None
+    _stop_flag.clear()
+    while not _progress_q.empty():
+        _progress_q.get_nowait()
+    threading.Thread(target=_run_video_only, daemon=True).start()
     return {"started": True}
 
 
@@ -334,7 +386,36 @@ async def download_snapshot(count: int = 1):
             headers={"Content-Disposition": "attachment; filename=3d_render.png"}
         )
 
-    # Zip N copies
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for i in range(1, count + 1):
+            zf.writestr(f"3d_render_{i:02d}.png", img_bytes)
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename=3d_renders_{count}x.zip"}
+    )
+
+
+@app.post("/api/download/snapshot-data")
+async def download_snapshot_data(request: Request):
+    body = await request.json()
+    data_url: str = body.get("data", "")
+    count: int    = max(1, int(body.get("count", 1)))
+
+    # Strip data URL prefix
+    if "," in data_url:
+        data_url = data_url.split(",", 1)[1]
+    img_bytes = base64.b64decode(data_url)
+
+    if count <= 1:
+        return StreamingResponse(
+            io.BytesIO(img_bytes),
+            media_type="image/png",
+            headers={"Content-Disposition": "attachment; filename=3d_render.png"}
+        )
+
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         for i in range(1, count + 1):

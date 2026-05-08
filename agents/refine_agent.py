@@ -139,10 +139,10 @@ def build_render_prompt(geometry_spec: dict, finishes_spec: dict, brand_spec: di
 
 
 def render_from_floor_plan(geometry_spec: dict, finishes_spec: dict, brand_spec: dict,
-                           floor_plan_url: str = None) -> str:
+                           floor_plan_url: str = None, max_attempts: int = 3) -> str:
     """
     Submit to NanoBanana image-to-image, poll for result, save and return base64-encoded PNG.
-    Accepts an optional pre-uploaded floor_plan_url to skip the imgbb upload (for parallel runs).
+    Retries up to max_attempts times on transient failures (flag=3 / 422 errors).
     """
     print("  Building render prompt from specs...", flush=True)
     prompt = build_render_prompt(geometry_spec, finishes_spec, brand_spec)
@@ -158,44 +158,55 @@ def render_from_floor_plan(geometry_spec: dict, finishes_spec: dict, brand_spec:
         print(f"  Floor plan uploaded: {floor_plan_url[:60]}...", flush=True)
 
     image_urls = [floor_plan_url]
+    last_error = None
 
-    print("  Submitting to NanoBanana (generate-2)...", flush=True)
-    response = _nb_post({
-        "prompt":      prompt,
-        "imageUrls":   image_urls,
-        "aspectRatio": "auto",
-        "resolution":  "2K",
-        "outputFormat": "jpg",
-    }, endpoint="generate-2")
-    print(f"  NanoBanana response: {response}", flush=True)
+    for attempt in range(1, max_attempts + 1):
+        if attempt > 1:
+            print(f"  Retrying NanoBanana (attempt {attempt}/{max_attempts})...", flush=True)
 
-    if response.get("code") != 200:
-        raise RuntimeError(f"NanoBanana submission failed: {response}")
+        try:
+            print("  Submitting to NanoBanana (generate-2)...", flush=True)
+            response = _nb_post({
+                "prompt":       prompt,
+                "imageUrls":    image_urls,
+                "aspectRatio":  "auto",
+                "resolution":   "2K",
+                "outputFormat": "jpg",
+            }, endpoint="generate-2")
+            print(f"  NanoBanana response: {response}", flush=True)
 
-    resp_data = response.get("data") or {}
+            if response.get("code") != 200:
+                raise RuntimeError(f"NanoBanana submission failed: {response}")
 
-    # Check if result came back immediately
-    try:
-        img_url = _extract_image_url(resp_data)
-        print("  Result returned immediately", flush=True)
-        data = resp_data
-    except RuntimeError:
-        task_id = resp_data.get("taskId")
-        if not task_id:
-            raise RuntimeError(f"No taskId in response: {response}")
-        print(f"  Polling taskId={task_id}...", flush=True)
-        data = _nb_poll(task_id)
+            resp_data = response.get("data") or {}
 
-    img_url = _extract_image_url(data)
-    print(f"  Downloading result from {img_url[:60]}...", flush=True)
-    img_bytes = _download_image(img_url)
+            try:
+                img_url = _extract_image_url(resp_data)
+                print("  Result returned immediately", flush=True)
+                data = resp_data
+            except RuntimeError:
+                task_id = resp_data.get("taskId")
+                if not task_id:
+                    raise RuntimeError(f"No taskId in response: {response}")
+                print(f"  Polling taskId={task_id}...", flush=True)
+                data = _nb_poll(task_id)
 
-    enhanced_path = RENDERS_OUTPUT_DIR / "nb_render_enhanced.png"
-    enhanced_path.write_bytes(img_bytes)
-    print(f"  Saved render to {enhanced_path}", flush=True)
+            img_url = _extract_image_url(data)
+            print(f"  Downloading result from {img_url[:60]}...", flush=True)
+            img_bytes = _download_image(img_url)
 
-    buf = base64.b64encode(enhanced_path.read_bytes()).decode("utf-8")
-    return buf, img_url
+            enhanced_path = RENDERS_OUTPUT_DIR / "nb_render_enhanced.png"
+            enhanced_path.write_bytes(img_bytes)
+            print(f"  Saved render to {enhanced_path}", flush=True)
+
+            buf = base64.b64encode(enhanced_path.read_bytes()).decode("utf-8")
+            return buf, img_url
+
+        except RuntimeError as e:
+            last_error = e
+            print(f"  NanoBanana attempt {attempt} failed: {e}", flush=True)
+
+    raise RuntimeError(f"NanoBanana failed after {max_attempts} attempts: {last_error}")
 
 
 def _apply_depth_cues(img_path: Path) -> Image.Image:

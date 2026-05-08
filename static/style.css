@@ -347,7 +347,7 @@ main {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 0;
+  position: relative;
 }
 
 .video-main video {
@@ -412,6 +412,81 @@ main {
   display: block;
   object-fit: cover;
   cursor: pointer;
+}
+
+.btn-snapshot {
+  width: 100%;
+  justify-content: center;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.btn-snapshot:hover { background: #cf5e1a; border-color: #cf5e1a; }
+
+/* Loading inside the main video tile (during HH stage) */
+.video-main-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  background: var(--bg-card);
+}
+
+/* nb-main-img: 2.5D preview fills the big video tile */
+#nb-main-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* Mini progress in the left strip (after NB done, before Continue) */
+.strip-mini-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 18px 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 6px;
+}
+.strip-mini-pct {
+  font-size: 28px;
+  font-weight: 300;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.strip-mini-bar {
+  width: 80px; height: 2px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 2px; overflow: hidden;
+}
+.strip-mini-fill {
+  height: 100%; width: 100%;
+  background: var(--accent); border-radius: 2px;
+}
+.strip-mini-label {
+  font-size: 10px; font-weight: 500;
+  color: var(--accent); letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* strip-hh-section flex column passthrough */
+#strip-hh-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .hidden { display: none !important; }
