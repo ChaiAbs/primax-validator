@@ -641,10 +641,11 @@ window.handleDownloadSnapshot = async function() {
     return;
   }
 
-  triggerDownload(
-    `/api/download/snapshot?count=${count}`,
-    count > 1 ? `3d_renders_${count}x.zip` : '3d_render.png'
-  );
+  const res  = await fetch(`/api/download/snapshot?count=${count}`);
+  const blob = await res.blob();
+  const url  = URL.createObjectURL(blob);
+  triggerDownload(url, count > 1 ? `3d_renders_${count}x.zip` : '3d_render.png');
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 };
 
 function renderBrand(brand) {
