@@ -157,9 +157,6 @@ main {
   padding-right: 4px;
 }
 
-#brand-section {
-  margin-top: auto;
-}
 .left-col::-webkit-scrollbar { width: 4px; }
 .left-col::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
