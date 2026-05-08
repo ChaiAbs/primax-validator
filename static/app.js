@@ -629,8 +629,8 @@ window.handleDownloadSnapshot = async function() {
     document.body.removeChild(a);
   }
 
-  btn.disabled    = true;
-  btn.textContent = '↓ ...';
+  btn.disabled   = true;
+  btn.innerHTML  = '<span class="btn-spinner"></span>';
 
   try {
     if (_capturedFrameDataUrl) {
@@ -652,7 +652,7 @@ window.handleDownloadSnapshot = async function() {
     }
   } finally {
     btn.disabled    = false;
-    btn.textContent = 'Download';
+    btn.innerHTML = 'Download';
   }
 };
 
