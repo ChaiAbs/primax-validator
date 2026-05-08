@@ -618,6 +618,7 @@ window.handleContinue = async function() {
 // ── Download snapshot ─────────────────────────────────────────────────────────
 window.handleDownloadSnapshot = async function() {
   const count = Math.max(1, parseInt(document.getElementById('download-count').value) || 1);
+  const btn   = document.querySelector('.download-row .btn');
 
   function triggerDownload(url, filename) {
     const a = document.createElement('a');
@@ -628,24 +629,31 @@ window.handleDownloadSnapshot = async function() {
     document.body.removeChild(a);
   }
 
-  if (_capturedFrameDataUrl) {
-    const res  = await fetch('/api/download/snapshot-data', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ data: _capturedFrameDataUrl, count }),
-    });
-    const blob = await res.blob();
-    const url  = URL.createObjectURL(blob);
-    triggerDownload(url, count > 1 ? `3d_renders_${count}x.zip` : '3d_render.png');
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
-    return;
-  }
+  btn.disabled    = true;
+  btn.textContent = '↓ ...';
 
-  const res  = await fetch(`/api/download/snapshot?count=${count}`);
-  const blob = await res.blob();
-  const url  = URL.createObjectURL(blob);
-  triggerDownload(url, count > 1 ? `3d_renders_${count}x.zip` : '3d_render.png');
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  try {
+    if (_capturedFrameDataUrl) {
+      const res  = await fetch('/api/download/snapshot-data', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ data: _capturedFrameDataUrl, count }),
+      });
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      triggerDownload(url, count > 1 ? `3d_renders_${count}x.zip` : '3d_render.png');
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } else {
+      const res  = await fetch(`/api/download/snapshot?count=${count}`);
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      triggerDownload(url, count > 1 ? `3d_renders_${count}x.zip` : '3d_render.png');
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    }
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = 'Download';
+  }
 };
 
 function renderBrand(brand) {
