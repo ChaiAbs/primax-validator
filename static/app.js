@@ -663,17 +663,21 @@ function renderBrand(brand) {
   const name = bi.brand_name || brand.project || '';
   if (!name) return;
 
-  const colours = (bi.primary_colours || []).map(c =>
-    `<div class="brand-swatch" style="background:${c.hex}" title="${c.name || ''}"></div>`
-  ).join('');
+  const allColours = [
+    ...(bi.primary_colours || []).map(c => ({ hex: c.hex, label: c.name || c.hex })),
+    ...(pres.accent_colours || []).map(c => ({ hex: c.hex, label: c.where || c.name || c.hex })),
+  ];
 
-  const accents = (pres.accent_colours || []).map(c =>
-    `<div class="brand-swatch" style="background:${c.hex}" title="${c.where || ''}"></div>`
+  const swatchRows = allColours.map(c => `
+    <div class="brand-swatch-row">
+      <div class="brand-swatch" style="background:${c.hex}"></div>
+      <span class="brand-swatch-label">${c.label}</span>
+    </div>`
   ).join('');
 
   card.innerHTML = `
     <div class="brand-name">${name}</div>
-    <div class="brand-swatches">${colours}${accents}</div>
+    <div class="brand-swatches-vertical">${swatchRows}</div>
     <div class="brand-meta">
       ${pres.mood ? `Mood: ${pres.mood}<br/>` : ''}
       ${pres.lighting ? `Lighting: ${pres.lighting}` : ''}
