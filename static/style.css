@@ -141,7 +141,7 @@ header {
 main {
   display: grid;
   grid-template-columns: 340px 1fr;
-  align-items: start;
+  align-items: stretch;
   gap: 16px;
   padding: 20px 24px;
   flex: 1;
@@ -155,6 +155,16 @@ main {
   gap: 16px;
   overflow-y: auto;
   padding-right: 4px;
+  justify-content: space-between;
+}
+
+.left-col-title {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  flex-shrink: 0;
 }
 .left-col::-webkit-scrollbar { width: 4px; }
 .left-col::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
