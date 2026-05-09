@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
-from config import DATA_DIR, CACHE_DIR, RENDERS_OUTPUT_DIR, RENDER_FILES, RENDERS_DIR
+from config import DATA_DIR, CACHE_DIR, RENDERS_OUTPUT_DIR, RENDERS_DIR
 
 app = FastAPI(title="PRiMAX Visualiser")
 

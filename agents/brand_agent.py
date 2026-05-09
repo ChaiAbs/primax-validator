@@ -1,6 +1,6 @@
 import anthropic
 import base64
-from config import BRAND_GUIDE, MODEL_FAST
+from config import BRAND_GUIDE, MODEL
 from agents.utils import parse_json_response
 
 
@@ -13,7 +13,7 @@ def extract_brand_spec(client: anthropic.Anthropic) -> dict:
         pdf_data = base64.standard_b64encode(f.read()).decode("utf-8")
 
     response = client.messages.create(
-        model=MODEL_FAST,
+        model=MODEL,
         max_tokens=4096,
         messages=[{
             "role": "user",

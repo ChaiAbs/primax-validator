@@ -8,7 +8,7 @@ from pathlib import Path
 
 import anthropic
 
-from config import MODEL_FAST, CACHE_DIR, RENDERS_OUTPUT_DIR
+from config import CACHE_DIR, RENDERS_OUTPUT_DIR
 
 
 NB_GENERATE  = "https://api.nanobananaapi.ai/api/v1/nanobanana/generate"
@@ -207,31 +207,3 @@ def render_from_floor_plan(geometry_spec: dict, finishes_spec: dict, brand_spec:
             print(f"  NanoBanana attempt {attempt} failed: {e}", flush=True)
 
     raise RuntimeError(f"NanoBanana failed after {max_attempts} attempts: {last_error}")
-
-
-def _apply_depth_cues(img_path: Path) -> Image.Image:
-    """
-    Post-process a flat NanoBanana render with two cheap depth cues:
-    1. Directional gradient  — lighter top-right, darker bottom-left (aerial light)
-    2. Ambient occlusion     — darken pixels near wall edges to simulate corners
-    """
-    img = Image.open(img_path).convert("RGB")
-    arr = np.array(img, dtype=np.float32)
-    h, w = arr.shape[:2]
-
-    # Directional gradient (light from top-right)
-    xs = np.linspace(0, 1, w)
-    ys = np.linspace(0, 1, h)
-    xg, yg = np.meshgrid(xs, ys)
-    gradient = 1.0 - 0.15 * (yg * 0.6 + (1 - xg) * 0.4)
-    arr = arr * gradient[:, :, np.newaxis]
-
-    # Ambient occlusion: darken near dark wall edges
-    gray = np.mean(arr, axis=2)
-    wall_mask = Image.fromarray((gray < 80).astype(np.uint8) * 255)
-    ao = np.array(wall_mask.filter(ImageFilter.GaussianBlur(radius=8)), dtype=np.float32) / 255.0
-    arr = arr * (1.0 - 0.20 * ao)[:, :, np.newaxis]
-
-    result = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8))
-    result = ImageEnhance.Contrast(result).enhance(1.10)
-    return result

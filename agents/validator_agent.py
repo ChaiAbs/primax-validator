@@ -14,7 +14,7 @@ import re
 from PIL import Image
 from pathlib import Path
 
-from config import MODEL_SMART
+from config import MODEL
 
 
 def _encode_resized(path: Path) -> str:
@@ -85,7 +85,7 @@ Return JSON only:
 }}"""})
 
     response = client.messages.create(
-        model=MODEL_SMART,
+        model=MODEL,
         max_tokens=4096,
         messages=[{"role": "user", "content": content}]
     )

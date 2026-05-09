@@ -1,7 +1,7 @@
 import anthropic
 import base64
 from pathlib import Path
-from config import RENDER_FILES, MODEL_FAST
+from config import RENDERS_DIR, MODEL
 from agents.utils import parse_json_response
 
 
@@ -17,8 +17,9 @@ def extract_project_spec(client: anthropic.Anthropic) -> dict:
     Reads all project renders and extracts a canonical finishes specification.
     Separates permanent finishes (floor, walls, cabinets) from staged elements (furniture, art).
     """
+    render_files = sorted(RENDERS_DIR.glob("*.jpg")) + sorted(RENDERS_DIR.glob("*.jpeg")) if RENDERS_DIR.exists() else []
     image_blocks = []
-    for i, render_path in enumerate(RENDER_FILES):
+    for i, render_path in enumerate(render_files):
         data, media_type = encode_image(render_path)
         image_blocks.append({
             "type": "image",
@@ -73,7 +74,7 @@ Return ONLY valid JSON in this exact format:
     })
 
     response = client.messages.create(
-        model=MODEL_FAST,
+        model=MODEL,
         max_tokens=4096,
         messages=[{"role": "user", "content": image_blocks}]
     )

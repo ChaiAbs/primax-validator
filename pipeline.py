@@ -77,7 +77,7 @@ def run_nb_stage(max_attempts: int = 3) -> dict:
     """
     import base64 as _b64
     import shutil
-    from agents.refine_agent import render_from_floor_plan, _upload_imgbb
+    from services.nanobanana import render_from_floor_plan, _upload_imgbb
     from agents.validator_agent import score_renders
     from main import _stop_flag
     from config import CACHE_DIR
@@ -143,8 +143,8 @@ def run_hh_stage() -> dict:
     Stage 2: Send existing nb_render_enhanced.png to Happy Horse → video + snapshot.
     """
     import io as _io
-    from agents.refine_agent import _upload_imgbb
-    from agents.happyhorse_agent import generate_video_frame
+    from services.nanobanana import _upload_imgbb
+    from services.happyhorse import generate_video_frame
     from PIL import Image as _Image
 
     nb_path = RENDERS_OUTPUT_DIR / "nb_render_enhanced.png"
