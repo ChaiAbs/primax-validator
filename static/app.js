@@ -633,23 +633,15 @@ window.handleDownloadSnapshot = async function() {
   btn.innerHTML  = '<span class="btn-spinner"></span>';
 
   try {
-    if (_capturedFrameDataUrl) {
-      const res  = await fetch('/api/download/snapshot-data', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ data: _capturedFrameDataUrl, count }),
-      });
-      const blob = await res.blob();
-      const url  = URL.createObjectURL(blob);
-      triggerDownload(url, count > 1 ? `3d_renders_${count}x.zip` : '3d_render.png');
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
-    } else {
-      const res  = await fetch(`/api/download/snapshot?count=${count}`);
-      const blob = await res.blob();
-      const url  = URL.createObjectURL(blob);
-      triggerDownload(url, count > 1 ? `3d_renders_${count}x.zip` : '3d_render.png');
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
-    }
+    const res  = await fetch('/api/download/snapshot-data', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ data: _capturedFrameDataUrl, count }),
+    });
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    triggerDownload(url, count > 1 ? `3d_renders_${count}x.zip` : '3d_render.png');
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
   } finally {
     btn.disabled    = false;
     btn.innerHTML = 'Download';

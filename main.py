@@ -371,33 +371,6 @@ async def get_results():
     return result
 
 
-@app.get("/api/download/snapshot")
-async def download_snapshot(count: int = 1):
-    frame_path = RENDERS_OUTPUT_DIR / "happyhorse_frame.png"
-    if not frame_path.exists():
-        return JSONResponse({"error": "No snapshot available"}, status_code=404)
-
-    img_bytes = frame_path.read_bytes()
-
-    if count <= 1:
-        return StreamingResponse(
-            io.BytesIO(img_bytes),
-            media_type="image/png",
-            headers={"Content-Disposition": "attachment; filename=3d_render.png"}
-        )
-
-    buf = io.BytesIO()
-    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-        for i in range(1, count + 1):
-            zf.writestr(f"3d_render_{i:02d}.png", img_bytes)
-    buf.seek(0)
-    return StreamingResponse(
-        buf,
-        media_type="application/zip",
-        headers={"Content-Disposition": f"attachment; filename=3d_renders_{count}x.zip"}
-    )
-
-
 @app.post("/api/download/snapshot-data")
 async def download_snapshot_data(request: Request):
     body = await request.json()

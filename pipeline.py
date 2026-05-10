@@ -8,7 +8,6 @@ load_dotenv(override=True)
 import anthropic
 from agents.geometry_agent import extract_geometry_spec
 from agents.spec_agent import extract_project_spec
-from agents.brand_agent import extract_brand_spec
 from config import CACHE_DIR, RENDERS_OUTPUT_DIR
 
 
@@ -19,23 +18,15 @@ def _load_cache(name: str) -> dict | None:
     return None
 
 
-def _save_cache(name: str, data: dict):
-    (CACHE_DIR / f"{name}.json").write_text(json.dumps(data, indent=2))
 
-
-def extract_specs(use_cache: bool = True, cache_brand: bool = False) -> tuple[dict, dict, dict]:
+def extract_specs() -> tuple[dict, dict, dict]:
     """
-    Extract geometry, finishes and brand specs in parallel.
-    Results are cached — subsequent calls return instantly.
-    cache_brand=True keeps brand from cache even when use_cache=False.
+    Extract geometry and finishes fresh each run; brand is loaded from cache
+    (written during upload by main.py).
     """
-    geo_cached = _load_cache("geometry") if use_cache else None
-    fin_cached = _load_cache("finishes") if use_cache else None
-    brd_cached = _load_cache("brand")    if (use_cache or cache_brand) else None
-
-    if geo_cached and fin_cached and brd_cached:
-        print("Specs loaded from cache")
-        return geo_cached, fin_cached, brd_cached
+    brand_spec = _load_cache("brand")
+    if brand_spec is None:
+        raise RuntimeError("Brand cache missing — upload files first")
 
     client = anthropic.Anthropic()
 
@@ -47,24 +38,14 @@ def extract_specs(use_cache: bool = True, cache_brand: bool = False) -> tuple[di
                 print(f"  {name} extraction attempt {attempt} failed: {e} — retrying...", flush=True)
         raise RuntimeError(f"{name} extraction failed after 2 attempts")
 
-    print("Extracting specs in parallel (geometry · finishes · brand)...")
+    print("Extracting specs in parallel (geometry · finishes)...")
     t0 = time.time()
-    tasks = {}
-    with ThreadPoolExecutor(max_workers=3) as executor:
-        if not geo_cached:
-            tasks["geometry"] = executor.submit(_run_with_retry, extract_geometry_spec, "geometry")
-        if not fin_cached:
-            tasks["finishes"] = executor.submit(_run_with_retry, extract_project_spec,  "finishes")
-        if not brd_cached:
-            tasks["brand"]    = executor.submit(_run_with_retry, extract_brand_spec,    "brand")
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        geo_future = executor.submit(_run_with_retry, extract_geometry_spec, "geometry")
+        fin_future = executor.submit(_run_with_retry, extract_project_spec,  "finishes")
+        geometry_spec = geo_future.result()
+        finishes_spec = fin_future.result()
 
-        geometry_spec = tasks["geometry"].result() if "geometry" in tasks else geo_cached
-        finishes_spec = tasks["finishes"].result() if "finishes" in tasks else fin_cached
-        brand_spec    = tasks["brand"].result()    if "brand"    in tasks else brd_cached
-
-    _save_cache("geometry", geometry_spec)
-    _save_cache("finishes", finishes_spec)
-    _save_cache("brand",    brand_spec)
     print(f"  Specs extracted in {time.time() - t0:.1f}s")
     return geometry_spec, finishes_spec, brand_spec
 
@@ -82,7 +63,7 @@ def run_nb_stage(max_attempts: int = 3) -> dict:
     from main import _stop_flag
     from config import CACHE_DIR
 
-    geometry_spec, finishes_spec, brand_spec = extract_specs(use_cache=False, cache_brand=True)
+    geometry_spec, finishes_spec, brand_spec = extract_specs()
 
     if _stop_flag.is_set():
         raise StopIteration("Pipeline stopped by user")
